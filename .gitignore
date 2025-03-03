@@ -1,0 +1,22 @@
+# FRONTEND IGNORE
+frontend/node_modules/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# BACKEND IGNORE
+backend/node_modules/
+backend/.env
+backend/uploads/
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+
+# MISC
+.DS_Store
