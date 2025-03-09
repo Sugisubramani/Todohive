@@ -1,13 +1,11 @@
-// server/controllers/taskController.js
-const fs = require('fs');
-const path = require('path');
-const Task = require('../models/Task');
+const fs = require("fs");
+const path = require("path");
+const Task = require("../models/Task");
 
 exports.createTask = async (req, res) => {
   try {
     const { title, description, dueDate, priority } = req.body;
-    // Handle file uploads (req.files contains an array of files, if any)
-    const attachments = req.files ? req.files.map(file => file.path) : [];
+    const attachments = req.files ? req.files.map((file) => `/uploads/${file.filename}`) : [];
     const task = new Task({ user: req.user.id, title, description, dueDate, priority, attachments });
     await task.save();
     res.status(201).json(task);
@@ -16,44 +14,15 @@ exports.createTask = async (req, res) => {
   }
 };
 
-exports.deleteAttachment = async (req, res) => {
-  try {
-    const taskId = req.params.id;
-    const { filePath } = req.body; // Expect filePath in the request body
-
-    // Find the task
-    const task = await Task.findById(taskId);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-
-    // Check if the attachment exists in the task
-    if (!task.attachments.includes(filePath)) {
-      return res.status(404).json({ message: 'Attachment not found in task' });
-    }
-
-    // Remove the attachment from the task's attachments array
-    task.attachments = task.attachments.filter(file => file !== filePath);
-    await task.save();
-
-    // Optionally, delete the file from disk
-    const fullPath = path.join(__dirname, '../uploads', path.basename(filePath));
-    fs.unlink(fullPath, (err) => {
-      if (err) console.error('Error deleting file from disk:', err);
-    });
-
-    res.json({ message: 'Attachment deleted successfully.' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
 exports.getTasks = async (req, res) => {
   try {
     const { page = 1 } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
-    const tasks = await Task.find({ user: req.user.id }).sort({ createdAt: -1 }).skip(skip).limit(limit);
+    const tasks = await Task.find({ user: req.user.id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     const total = await Task.countDocuments({ user: req.user.id });
     res.json({ tasks, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
@@ -64,41 +33,129 @@ exports.getTasks = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     let task = await Task.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Extract new file attachments from multer
-    const newAttachments = req.files ? req.files.map(file => file.path) : [];
-
-    // Update fields from req.body (they will come as strings even in FormData)
-    task.title = req.body.title || task.title;
-    task.description = req.body.description || task.description;
-    task.dueDate = req.body.dueDate || task.dueDate;
-    task.priority = req.body.priority || task.priority;
-
-    // Merge existing attachments with new attachments if needed (or replace, as per your app logic)
-    task.attachments = [...task.attachments, ...newAttachments];
-
-    // If you're also toggling completion via a dedicated request, handle that separately.
-    if (req.body.completed !== undefined) {
-      task.completed = req.body.completed;
+    // Parse existingAttachments if provided (for attachments that are being renamed)
+    let existingAttachments = [];
+    if (req.body.existingAttachments) {
+      try {
+        existingAttachments = JSON.parse(req.body.existingAttachments);
+      } catch (error) {
+        console.error("Error parsing existingAttachments:", error);
+        return res.status(400).json({ message: "Invalid existingAttachments format." });
+      }
     }
 
+    console.log("Received existingAttachments:", existingAttachments);
+
+    let renamedAttachments = [];
+    // Collect original paths from the attachments being renamed
+    let originalsToRemove = [];
+    for (let file of existingAttachments) {
+      if (!file.originalPath || typeof file.originalPath !== "string") {
+        console.warn("Skipping invalid attachment (missing originalPath):", file);
+        continue;
+      }
+      if (!file.newName || typeof file.newName !== "string") {
+        console.warn("Skipping invalid attachment (missing newName):", file);
+        continue;
+      }
+
+      // Build file paths
+      let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
+      let newPath = path.join(__dirname, "..", "uploads", file.newName);
+
+      console.log(`🔍 Checking file: ${oldPath}`);
+
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.renameSync(oldPath, newPath);
+          console.log(`✅ Renamed: ${oldPath} ➝ ${newPath}`);
+          renamedAttachments.push(`/uploads/${file.newName}`);
+          originalsToRemove.push(file.originalPath);
+        } catch (err) {
+          console.error("❌ Error renaming file:", err);
+          // In case of error, keep the original
+          renamedAttachments.push(file.originalPath);
+        }
+      } else {
+        console.warn("❌ File not found on disk, keeping old path:", oldPath);
+        renamedAttachments.push(file.originalPath);
+      }
+    }
+
+    // Remove the original attachments that were renamed from the existing attachments array.
+    task.attachments = task.attachments.filter(
+      (attachment) => !originalsToRemove.includes(attachment)
+    );
+
+    // Handle new attachments (files uploaded with this request)
+    const newAttachments = req.files ? req.files.map((file) => `/uploads/${file.filename}`) : [];
+
+    // Update only the provided fields
+    if (req.body.title !== undefined) task.title = req.body.title;
+    if (req.body.description !== undefined) task.description = req.body.description;
+    if (req.body.dueDate !== undefined) task.dueDate = req.body.dueDate;
+    if (req.body.priority !== undefined) task.priority = req.body.priority;
+    if (req.body.completed !== undefined) task.completed = req.body.completed;
+
+    // Merge existing attachments with renamed and new attachments.
+    // If no attachment changes are provided, the attachments remain unchanged.
+    if (renamedAttachments.length > 0 || newAttachments.length > 0) {
+      task.attachments = [...new Set([...task.attachments, ...renamedAttachments, ...newAttachments])];
+    }
+    
     await task.save();
     res.json(task);
   } catch (err) {
+    console.error("Error updating task:", err);
     res.status(400).json({ message: err.message });
   }
 };
 
-exports.deleteTask = async (req, res) => {
+exports.deleteAttachment = async (req, res) => {
   try {
-    const task = await Task.findByIdAndDelete(req.params.id);
-    if (!task) return res.status(404).json({ message: 'Task not found' });
-    res.json({ message: 'Task deleted successfully.' });
+    const { filePath } = req.body;
+    const taskId = req.params.id;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    if (!task.attachments.includes(filePath)) {
+      return res.status(404).json({ message: "Attachment not found in task" });
+    }
+
+    task.attachments = task.attachments.filter((file) => file !== filePath);
+    await task.save();
+
+    const fullPath = path.resolve(__dirname, "..", filePath);
+    fs.unlink(fullPath, (err) => {
+      if (err) console.error("Error deleting file:", err);
+    });
+
+    res.json({ message: "Attachment deleted successfully." });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
   }
 };
 
+exports.deleteTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
+    task.attachments.forEach((filePath) => {
+      const fullPath = path.resolve(__dirname, "..", filePath);
+      fs.unlink(fullPath, (err) => {
+        if (err) console.error("Error deleting file:", err);
+      });
+    });
+
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ message: "Task deleted successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};

@@ -28,26 +28,35 @@ exports.signup = async (req, res) => {
 
 exports.verifyEmail = async (req, res) => {
   const { token } = req.query;
+  console.log("Received verification token:", token);
+
   try {
+    if (!token) {
+      return res.status(400).json({ message: 'Missing verification token' });
+    }
+
     const user = await User.findOne({ verificationToken: token });
-    if (!user) return res.status(400).json({ message: 'Invalid token' });
+
+    if (!user) {
+      console.error("No user found for token:", token);
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
 
     user.emailVerified = true;
     user.verificationToken = undefined;
     await user.save();
 
-    // Generate a token
     const payload = { user: { id: user.id, name: user.name, email: user.email } };
     const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // Return user data along with token
     res.json({
       message: 'Email verified successfully.',
       token: jwtToken,
       user: { id: user.id, name: user.name, email: user.email }
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Email verification error:", err);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
@@ -61,10 +70,17 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    const payload = { user: { id: user.id } };
+    const payload = { user: { id: user.id, name: user.name, email: user.email } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ token });
+
+    // ✅ Only one response
+    return res.json({
+      token,
+      user: { id: user.id, name: user.name, email: user.email }
+    });
+
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
+

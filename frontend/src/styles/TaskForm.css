@@ -1,0 +1,28 @@
+/* Task Form */
+.task-form {
+  width: 100%;
+}
+
+.task-form .form-control {
+  font-size: 1rem;
+  height: 2.5rem;
+}
+
+/* Textarea adjustments */
+.task-form textarea.form-control {
+  min-height: 3rem; /* Increased for better input experience */
+  resize: vertical;
+}
+
+/* Combined row */
+.task-form .combined-row {
+  display: flex;
+  flex-wrap: wrap; /* Ensures responsiveness */
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.task-form .combined-row > div {
+  flex: 1;
+  min-width: 150px; /* Prevents elements from shrinking too much */
+}

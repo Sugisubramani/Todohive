@@ -1,0 +1,25 @@
+.task-list-container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 100px); /* Adjust based on layout */
+  height: 100%;
+  position: relative;
+}
+
+.task-items {
+  flex-grow: 1;
+  overflow-y: hidden; /* Blocks unwanted scrolling */
+  padding-bottom: 80px; /* Prevents last task from being hidden */
+}
+
+.pagination-controls {
+  position: absolute; /* changed from fixed */
+  bottom: -20px; /* Adjust as needed */
+  left: 50%; /* center horizontally relative to container */
+  transform: translateX(-50%);
+  background: transparent;
+  padding: 5px;
+  text-align: center;
+  z-index: 100;
+}
+

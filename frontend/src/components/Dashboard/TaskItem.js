@@ -1,13 +1,14 @@
-// client/src/components/Dashboard/TaskItem.js
-import React from 'react';
-import axios from 'axios';
-import { FaRegCalendarAlt, FaPaperclip } from 'react-icons/fa';
-import '../../styles/Dashboard.css';
+import React, { useState } from "react";
+import axios from "axios";
+import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
+import "../../styles/TaskItem.css";
 
 const TaskItem = ({ task, fetchTasks, onEditTask }) => {
+  const [expanded, setExpanded] = useState(false);
+
   const toggleComplete = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       await axios.put(
         `http://localhost:5000/api/tasks/${task._id}`,
         { completed: !task.completed },
@@ -15,34 +16,40 @@ const TaskItem = ({ task, fetchTasks, onEditTask }) => {
       );
       fetchTasks();
     } catch (error) {
-      console.error('Error toggling task:', error);
+      console.error("Error toggling task:", error);
     }
   };
 
   const handleDelete = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       await axios.delete(`http://localhost:5000/api/tasks/${task._id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       fetchTasks();
     } catch (error) {
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
     }
   };
 
+  // Determine if the footer should be shown
+  const hasFooter =
+    task.dueDate ||
+    (task.attachments && task.attachments.length > 0) ||
+    task.priority;
+
   return (
-    <div className="card task-item">
-      <div className="card-body">
+    <div className={`card task-item ${task.completed ? "completed" : ""}`}>
+      <div className="card-body p-2">
         {/* Header: Toggle, Title, and Conditional Button */}
-        <div className="task-item-header d-flex align-items-center">
+        <div className="task-item-header">
           <input
             type="checkbox"
-            className="form-check-input me-2"
+            className="form-check-input"
             checked={task.completed}
             onChange={toggleComplete}
           />
-          <h5 className="mb-0 flex-grow-1">{task.title}</h5>
+          <h5 className="task-title">{task.title}</h5>
           {task.completed ? (
             <button className="btn btn-danger btn-sm" onClick={handleDelete}>
               Delete
@@ -53,40 +60,62 @@ const TaskItem = ({ task, fetchTasks, onEditTask }) => {
             </button>
           )}
         </div>
-        {/* Description */}
-        <div className="mt-2">
-          <p className="mb-0">{task.description || "No description"}</p>
-        </div>
-        {/* Footer: Date, Attachments, Priority */}
-        <div className="task-item-footer d-flex align-items-center justify-content-between mt-2">
-          <div className="due-date">
-            <FaRegCalendarAlt className="me-1" />
-            <small className="text-muted">{task.dueDate ? new Date(task.dueDate).toLocaleString() : "No date"}</small>
-          </div>
-          <div className="attachments">
-            {task.attachments && task.attachments.length > 0 ? (
-              task.attachments.map((file, index) => {
-                const fileName = file.split(/[\\/]/).pop();
-                const displayName = fileName.includes('-')
-                  ? fileName.substring(fileName.indexOf('-') + 1)
-                  : fileName;
-                return (
-                  <div key={index} className="attachment-item">
-                    <FaPaperclip className="me-1" />
-                    <a href={`http://localhost:5000/${file}`} target="_blank" rel="noopener noreferrer">
-                      {displayName}
-                    </a>
-                  </div>
-                );
-              })
-            ) : (
-              <small className="text-muted">No attachments</small>
+        
+        {/* Description: Collapsed by default if too long */}
+        {task.description && (
+          <div className={`task-item-description ${expanded ? "expanded" : ""}`}>
+            <p className="mb-0">{task.description}</p>
+            {task.description.length > 100 && (
+              <button className="btn btn-link btn-sm" onClick={() => setExpanded(!expanded)}>
+                {expanded ? "Show Less" : "Show More"}
+              </button>
             )}
           </div>
-          <div className="priority">
-            <small className="text-muted">Priority: {task.priority || "N/A"}</small>
+        )}
+
+        {/* Footer: Render only if at least one field exists */}
+        {hasFooter && (
+          <div className="task-item-footer">
+            {/* Due Date First */}
+            {task.dueDate && (
+              <div className="task-due-date">
+                <FaRegCalendarAlt className="icon-date" />
+                <small>{new Date(task.dueDate).toLocaleString()}</small>
+              </div>
+            )}
+
+            {/* Priority Second */}
+            {task.priority && (
+              <div className={`task-priority ${task.priority.toLowerCase()}`}>
+                <small>Priority: {task.priority}</small>
+              </div>
+            )}
+
+            {/* Attachments Last */}
+            {task.attachments && task.attachments.length > 0 && (
+              <div className="task-attachments">
+                {task.attachments.map((file, index) => {
+                  const fileName = file.split(/[\\/]/).pop();
+                  const displayName = fileName.includes("-")
+                    ? fileName.substring(fileName.indexOf("-") + 1)
+                    : fileName;
+                  return (
+                    <div key={index} className="attachment-item">
+                      <FaPaperclip className="icon-clip" />
+                      <a
+                        href={`http://localhost:5000/uploads/${fileName}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {displayName}
+                      </a>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

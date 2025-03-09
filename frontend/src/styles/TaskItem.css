@@ -1,0 +1,142 @@
+.task-item {
+  height: auto; /* Let the container expand */
+  max-width: 900px;
+  width: 85%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin: 5px auto;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: visible; /* Allow content to be visible if it overflows */
+}
+
+.task-item-description {
+  font-size: 0.8rem;
+  color: #555;
+  white-space: normal;
+  max-height: 48px; /* Prevents excessive expansion */
+  line-height: 1.4;
+  overflow: hidden;
+  padding-left: 24px;
+  margin-bottom: 5px; /* Avoids overlap with footer */
+}
+
+/* Default footer: fixed height for tasks without attachments */
+.task-item-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 3px 15px;
+  border-top: 1px solid #eee;
+  height: 20px;
+  overflow: visible;
+}
+
+/* Expanded footer when attachments exist */
+.task-item-footer.expanded-footer {
+  height: auto;
+}
+
+/* Task Header */
+.task-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Task Title */
+.task-title {
+  flex-grow: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Due Date */
+.task-due-date {
+  font-size: 0.8rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+}
+
+.task-due-date .icon-date {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Priority Label */
+.task-priority {
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 20px;
+}
+
+.task-priority.high { 
+  color: red;
+  padding-left: 4px;
+}
+.task-priority.medium { 
+  color: orange;
+  padding-left: 4px;
+}
+.task-priority.low { 
+  color: green;
+  padding-left: 4px;
+}
+
+/* Attachments */
+.task-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding-left: 3px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #007bff;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(0, 123, 255, 0.1);
+}
+
+/* Action Buttons */
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-actions .btn-sm {
+  font-size: 0.75rem;
+  padding: 2px 6px;
+}
+
+/* Completed Task */
+/* Only fade the title, not the whole container */
+.task-item.completed .task-title {
+  opacity: 0.5;
+  color: #888;
+  text-decoration: line-through;
+}
+
+.task-item.completed .task-actions .btn-primary {
+  display: none;
+}

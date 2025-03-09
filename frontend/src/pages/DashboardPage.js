@@ -18,33 +18,38 @@ const DashboardPage = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
 
-  const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
-
-  // Define fetchTasks here so it can be passed down
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+  
+  // Modified fetchTasks: Default to current page instead of 1
   const fetchTasks = async (currentPage = page) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/tasks?page=${currentPage}`, {
+      const res = await axios.get(`http://localhost:5000/api/tasks?page=${currentPage}&limit=5`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
+  
       let fetchedTasks = res.data.tasks;
-      // Apply priority filter if needed
+  
       if (priorityFilter !== 'All') {
         fetchedTasks = fetchedTasks.filter(task => task.priority === priorityFilter);
       }
-      setTasks(fetchedTasks);
+  
+      // Ensure newest tasks are always at the top
+      setTasks(fetchedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  
       setPages(res.data.pages);
       setPage(res.data.page);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
   };
-
-  // Fetch tasks on mount and when priorityFilter changes
+  
+  // When priorityFilter changes, reset to page 1
   useEffect(() => {
-    fetchTasks();
-    // eslint-disable-next-line
+    fetchTasks(1);
   }, [priorityFilter]);
-
+  
   const openAddTaskModal = () => {
     setEditTask(null);
     setShowModal(true);
@@ -66,22 +71,20 @@ const DashboardPage = () => {
         openAddTaskModal={openAddTaskModal}
       />
       <div className="flex-grow-1 p-3 main-content">
-        <div className="text-center mb-3">
-          <a
-            href="#!"
-            className="main-add-task text-decoration-none"
-            onClick={openAddTaskModal}
-          >
+        <div className="header-area text-center">
+          <a href="#!" className="main-add-task text-decoration-none" onClick={openAddTaskModal}>
             + Add Task
           </a>
         </div>
-        <TaskList
-          tasks={tasks}
-          fetchTasks={fetchTasks}
-          openEditTaskModal={openEditTaskModal}
-          pages={pages}
-          page={page}
-        />
+        <div className="task-list-container">
+          <TaskList
+            tasks={tasks}
+            fetchTasks={fetchTasks}
+            openEditTaskModal={openEditTaskModal}
+            pages={pages}
+            page={page}
+          />
+        </div>
       </div>
       <Modal show={showModal} onHide={closeModal} centered>
         <Modal.Header closeButton>
@@ -101,3 +104,4 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+    

@@ -1,16 +1,20 @@
 // client/src/components/Auth/Signup.js
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import Navbar from '../Layout/Navbar';
+import '../../styles/Auth.css';
 
 const Signup = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+
+  const togglePasswordVisibility = () => setPasswordVisible((prev) => !prev);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,25 +29,62 @@ const Signup = () => {
   };
 
   return (
-    <div className="container mt-5">
-      <h2>Signup</h2>
-      {message && <div className="alert alert-danger">{message}</div>}
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Name</label>
-          <input type="text" name="name" className="form-control" onChange={handleChange} required />
+    <>
+      <Navbar />
+      <div className="auth-container">
+        <h2>Signup</h2>
+        {message && <div className="alert alert-danger">{message}</div>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label>Name</label>
+            <input 
+              type="text" 
+              name="name" 
+              className="form-control" 
+              placeholder="Username"
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+          <div className="form-group">
+            <label>Email address</label>
+            <input 
+              type="email" 
+              name="email" 
+              className="form-control" 
+              placeholder="Enter your email"
+              onChange={handleChange} 
+              required 
+            />
+          </div>
+          <div className="form-group password-group">
+            <label>Password</label>
+            <div className="password-input-container">
+              <input 
+                type={passwordVisible ? "text" : "password"} 
+                name="password" 
+                className="form-control" 
+                placeholder="Enter your password"
+                onChange={handleChange} 
+                required 
+                minLength="8"
+              />
+              <button
+                type="button"
+                className="toggle-password"
+                onClick={togglePasswordVisibility}
+              >
+                {passwordVisible ? <span>Hide</span> : <span>Show</span>}
+              </button>
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary btn-auth">Signup</button>
+        </form>
+        <div className="auth-toggle">
+          Already have an account? <Link to="/auth/login">Login</Link>
         </div>
-        <div className="form-group">
-          <label>Email address</label>
-          <input type="email" name="email" className="form-control" onChange={handleChange} required />
-        </div>
-        <div className="form-group">
-          <label>Password</label>
-          <input type="password" name="password" className="form-control" onChange={handleChange} required />
-        </div>
-        <button type="submit" className="btn btn-primary">Signup</button>
-      </form>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -1,0 +1,153 @@
+/* Sidebar Container */
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    transition: width 0.3s ease-in-out;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border-right: 1px solid #ddd;
+}
+
+/* Collapsed Sidebar */
+.sidebar.collapsed {
+    width: 60px;
+}
+
+/* Keep Toggle Button Always Visible */
+.toggle-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    z-index: 1000;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+/* Profile Container */
+.profile-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+/* Profile Icon - Always Visible */
+.profile-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    line-height: 40px;
+    text-align: center;
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 50%;
+}
+
+/* Profile Name & Dropdown Arrow - Hidden When Collapsed */
+.sidebar.collapsed .profile-container .sidebar-text,
+.sidebar.collapsed .profile-container .dropdown-arrow {
+    display: none;
+}
+
+/* Sidebar Content */
+.sidebar-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure sidebar content doesn't disappear completely */
+.sidebar.collapsed .sidebar-content {
+    display: none;
+}
+
+/* Custom styles for buttons (Add Task and Priority Filter Toggle) */
+.custom-white-button {
+    background-color: #fff !important;
+    border: 1px solid #ced4da !important;
+    color: #212529 !important;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.25rem !important;
+    width: 100%; /* Ensures button width is full */
+    text-align: center !important; /* Center text */
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Fully center text */
+}
+
+/* Adjust Add Task button text alignment */
+.custom-white-button.add-task-button {
+    color: #007bff !important;
+    border: 1px solid #ced4da !important;
+    text-align: left !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important; /* Moves text slightly left */
+    padding-left: 81px !important; /* Adjust this value as needed */
+}
+
+/* On hover, change border to black */
+.custom-white-button.add-task-button:hover,
+.custom-white-button.add-task-button:focus {
+    color: #007bff !important;
+    background-color: #fff !important;
+    border-color: #000 !important;
+}
+
+.priority-filter .dropdown-toggle:hover {
+    border-color: black !important;
+  }
+  
+/* Priority Filter - Only Text Changes Color */
+.dropdown-toggle.custom-white-button.priority-high {
+    color: red !important;
+    border-color: #ced4da !important; /* Box stays default */
+}
+
+.dropdown-toggle.custom-white-button.priority-medium {
+    color: orange !important;
+    border-color: #ced4da !important;
+}
+
+.dropdown-toggle.custom-white-button.priority-low {
+    color: green !important;
+    border-color: #ced4da !important;
+}
+
+/* Center text inside Priority Filter */
+.dropdown-toggle.custom-white-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center !important;
+}
+
+/* Ensure Priority Filter dropdown matches button width */
+.priority-filter .dropdown-menu {
+    width: 100% !important;
+    min-width: unset !important; /* Remove default min-width */
+    text-align: center;
+}
+
+/* Ensure selected priority text is centered */
+.dropdown-toggle.custom-white-button.priority-high,
+.dropdown-toggle.custom-white-button.priority-medium,
+.dropdown-toggle.custom-white-button.priority-low {
+    justify-content: center !important;
+    text-align: center !important;
+}
