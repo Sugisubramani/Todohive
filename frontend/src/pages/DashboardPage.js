@@ -12,7 +12,7 @@ const DashboardPage = () => {
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
-  
+
   // State for tasks and pagination
   const [tasks, setTasks] = useState([]);
   const [page, setPage] = useState(1);
@@ -21,35 +21,41 @@ const DashboardPage = () => {
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
-  
-  // Modified fetchTasks: Default to current page instead of 1
+
+  // Fetch tasks from the backend with proper pagination and filtering
   const fetchTasks = async (currentPage = page) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/tasks?page=${currentPage}&limit=5`, {
+      // Build the base URL with pagination
+      let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
+      
+      // Append the priority filter if it's not 'All'
+      if (priorityFilter !== 'All') {
+        url += `&priority=${priorityFilter}`;
+      }
+  
+      const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
   
-      let fetchedTasks = res.data.tasks;
+      // The backend now returns the properly filtered tasks
+      const fetchedTasks = res.data.tasks;
   
-      if (priorityFilter !== 'All') {
-        fetchedTasks = fetchedTasks.filter(task => task.priority === priorityFilter);
-      }
-  
-      // Ensure newest tasks are always at the top
+      // Ensure newest tasks are at the top (redundant if backend sorts, but safe to have)
       setTasks(fetchedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   
+      // Update pagination details from the response
       setPages(res.data.pages);
       setPage(res.data.page);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
   };
-  
+
   // When priorityFilter changes, reset to page 1
   useEffect(() => {
     fetchTasks(1);
   }, [priorityFilter]);
-  
+
   const openAddTaskModal = () => {
     setEditTask(null);
     setShowModal(true);
@@ -104,4 +110,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-    
