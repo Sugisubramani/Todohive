@@ -1,5 +1,5 @@
 // client/src/pages/DashboardPage.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import TaskList from '../components/Dashboard/TaskList';
 import Sidebar from '../components/Dashboard/Sidebar';
@@ -22,39 +22,35 @@ const DashboardPage = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  // Fetch tasks from the backend with proper pagination and filtering
-  const fetchTasks = async (currentPage = page) => {
+  // Wrap fetchTasks in useCallback so that it's memoized based on priorityFilter.
+  const fetchTasks = useCallback(async (currentPage = 1) => {
     try {
-      // Build the base URL with pagination
       let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
-      
-      // Append the priority filter if it's not 'All'
+
+      // Append priority filter if needed.
       if (priorityFilter !== 'All') {
         url += `&priority=${priorityFilter}`;
       }
-  
+
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-  
-      // The backend now returns the properly filtered tasks
+
       const fetchedTasks = res.data.tasks;
-  
-      // Ensure newest tasks are at the top (redundant if backend sorts, but safe to have)
+
+      // Sort tasks: newest first.
       setTasks(fetchedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-  
-      // Update pagination details from the response
       setPages(res.data.pages);
       setPage(res.data.page);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
-  };
+  }, [priorityFilter]);
 
-  // When priorityFilter changes, reset to page 1
+  // When priorityFilter changes, reset to page 1 by calling fetchTasks.
   useEffect(() => {
     fetchTasks(1);
-  }, [priorityFilter]);
+  }, [fetchTasks]);
 
   const openAddTaskModal = () => {
     setEditTask(null);
