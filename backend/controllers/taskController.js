@@ -16,14 +16,24 @@ exports.createTask = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const { page = 1 } = req.query;
+    const { page = 1, priority } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
-    const tasks = await Task.find({ user: req.user.id })
+    
+    // Build the query object with the user filter
+    const queryObj = { user: req.user.id };
+    
+    // Only filter by priority if a valid option is provided (not the default "Priority")
+    if (priority && priority !== 'Priority') {
+      queryObj.priority = priority;
+    }
+    
+    const tasks = await Task.find(queryObj)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    const total = await Task.countDocuments({ user: req.user.id });
+      
+    const total = await Task.countDocuments(queryObj);
     res.json({ tasks, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -46,7 +56,8 @@ exports.updateTask = async (req, res) => {
       }
     }
 
-    console.log("Received existingAttachments:", existingAttachments);
+    // Debug log commented out:
+    // console.log("Received existingAttachments:", existingAttachments);
 
     let renamedAttachments = [];
     // Collect original paths from the attachments being renamed
@@ -65,21 +76,23 @@ exports.updateTask = async (req, res) => {
       let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
       let newPath = path.join(__dirname, "..", "uploads", file.newName);
 
-      console.log(`🔍 Checking file: ${oldPath}`);
+      // Debug log commented out:
+      // console.log(`Checking file: ${oldPath}`);
 
       if (fs.existsSync(oldPath)) {
         try {
           fs.renameSync(oldPath, newPath);
-          console.log(`✅ Renamed: ${oldPath} ➝ ${newPath}`);
+          // Debug log commented out:
+          // console.log(`Renamed: ${oldPath} ➝ ${newPath}`);
           renamedAttachments.push(`/uploads/${file.newName}`);
           originalsToRemove.push(file.originalPath);
         } catch (err) {
-          console.error("❌ Error renaming file:", err);
+          console.error("Error renaming file:", err);
           // In case of error, keep the original
           renamedAttachments.push(file.originalPath);
         }
       } else {
-        console.warn("❌ File not found on disk, keeping old path:", oldPath);
+        console.warn("File not found on disk, keeping old path:", oldPath);
         renamedAttachments.push(file.originalPath);
       }
     }

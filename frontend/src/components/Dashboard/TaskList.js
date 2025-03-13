@@ -8,7 +8,13 @@ const TaskList = ({ tasks, fetchTasks, openEditTaskModal, pages, page }) => {
     <div className="task-list-container">
       <div className="task-items">
         {tasks.map((task) => (
-          <TaskItem key={task._id} task={task} fetchTasks={fetchTasks} onEditTask={openEditTaskModal} />
+          <TaskItem
+            key={task._id}
+            task={task}
+            fetchTasks={fetchTasks}
+            onEditTask={openEditTaskModal}
+            currentPage={page}  // pass current page to TaskItem
+          />
         ))}
       </div>
       <nav className="pagination-controls">

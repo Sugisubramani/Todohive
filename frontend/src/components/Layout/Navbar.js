@@ -7,7 +7,7 @@ const Navbar = () => {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-primary custom-navbar">
       <div className="container">
-        <NavLink className="navbar-brand" to="/">MERN ToDo</NavLink>
+        <NavLink className="navbar-brand" to="/">Todohive</NavLink>
         <button 
           className="navbar-toggler" 
           type="button" 

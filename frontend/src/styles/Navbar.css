@@ -11,7 +11,7 @@
   font-size: 1.5rem;
   text-transform: uppercase;
   color: #fff !important;
-  margin-left: -80px; /* Adjust this value to move further left */
+  margin-left: -95px; /* Adjust this value to move further left */
   transition: transform 0.3s ease;
 }
 
@@ -26,8 +26,8 @@
 /* Adjust nav links to move further right */
 .navbar-nav {
   display: flex;
-  gap: 2rem;
-  margin-right: -80px; /* Adjust this value to move links further right */
+  gap: 0.90rem;
+  margin-right: -100px  ; /* Adjust this value to move links further right */
 }
 
 .custom-navbar .nav-link {

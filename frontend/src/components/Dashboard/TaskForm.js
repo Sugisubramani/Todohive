@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
-import { FaTrash } from "react-icons/fa";
+import { FiTrash2 } from "react-icons/fi";
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
 
@@ -15,7 +15,14 @@ const formatDateForInput = (dateString) => {
   return localISOTime;
 };
 
-const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
+const getCurrentLocalISO = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+};
+
+const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }) => {
   const [formData, setFormData] = useState({
     title: taskToEdit ? taskToEdit.title : "",
     description: taskToEdit ? taskToEdit.description : "",
@@ -26,6 +33,8 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
   const [attachments, setAttachments] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
 
+  const descriptionRef = useRef(null);
+
   useEffect(() => {
     if (taskToEdit) {
       setFormData({
@@ -34,19 +43,27 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
         dueDate: taskToEdit.dueDate ? formatDateForInput(taskToEdit.dueDate) : "",
         priority: taskToEdit.priority,
       });
-
-      // Convert existing attachments into objects so they can be renamed
+      if (descriptionRef.current) {
+        descriptionRef.current.style.height = "auto";
+        descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
+      }
       const formattedExistingAttachments = (taskToEdit.attachments || []).map((filePath) => ({
         originalPath: filePath,
-        customName: filePath.split(/[\\/]/).pop(), // Extract filename
+        customName: filePath.split(/[\\/]/).pop(),
       }));
-
       setExistingAttachments(formattedExistingAttachments);
     } else {
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
       setExistingAttachments([]);
     }
   }, [taskToEdit]);
+
+  useEffect(() => {
+    if (descriptionRef.current) {
+      descriptionRef.current.style.height = "auto";
+      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
+    }
+  }, [formData.description]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -57,16 +74,15 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
       file,
       customName: file.name,
     }));
-
     setAttachments((prev) => [...prev, ...newFiles]);
   };
 
   const handleRenameNewFile = (index, newName) => {
-    setAttachments((prev) => {
-      return prev.map((file, i) =>
+    setAttachments((prev) =>
+      prev.map((file, i) =>
         i === index ? { ...file, customName: newName } : file
-      );
-    });
+      )
+    );
   };
 
   const handleRenameExistingFile = (index, newName) => {
@@ -77,23 +93,19 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
     );
   };
 
-
   const handleRemoveNewAttachment = (index) => {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleRemoveExistingAttachment = async (index) => {
     if (!taskToEdit) return;
-
     const filePathToRemove = existingAttachments[index].originalPath;
     const token = localStorage.getItem("token");
-
     try {
       await axios.delete(`http://localhost:5000/api/tasks/${taskToEdit._id}/attachments`, {
         headers: { Authorization: `Bearer ${token}` },
-        data: { filePath: filePathToRemove }, // ✅ Send filePath inside request body
+        data: { filePath: filePathToRemove },
       });
-
       setExistingAttachments((prev) => prev.filter((_, i) => i !== index));
     } catch (error) {
       console.error("Error deleting attachment:", error);
@@ -108,22 +120,17 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
     data.append("description", formData.description);
     data.append("dueDate", formData.dueDate);
     data.append("priority", formData.priority);
-
     if (attachments.length > 0) {
       attachments.forEach((item) => {
         const renamedFile = new File([item.file], item.customName, { type: item.file.type });
         data.append("attachments", renamedFile);
       });
     }
-
-    // ✅ Convert existingAttachments to include updated file names
     const updatedExistingAttachments = existingAttachments.map(file => ({
       originalPath: file.originalPath,
-      newName: file.customName
+      newName: file.customName,
     }));
-
     data.append("existingAttachments", JSON.stringify(updatedExistingAttachments));
-
     const token = localStorage.getItem("token");
     try {
       if (taskToEdit) {
@@ -135,8 +142,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
           headers: { Authorization: `Bearer ${token}` },
         });
       }
-
-      fetchTasks();
+      fetchTasks(currentPage);
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
       setAttachments([]);
       setExistingAttachments([]);
@@ -147,30 +153,58 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
     }
   };
 
-
   return (
-    <Form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit} className="task-form">
       <Form.Group className="mb-3" controlId="formTitle">
         <Form.Label>Title</Form.Label>
-        <Form.Control type="text" name="title" value={formData.title} onChange={handleChange} required />
+        <Form.Control
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+        />
       </Form.Group>
 
       <Form.Group className="mb-3" controlId="formDescription">
         <Form.Label>Description</Form.Label>
-        <Form.Control as="textarea" name="description" value={formData.description} onChange={handleChange} />
+        <Form.Control
+          as="textarea"
+          name="description"
+          rows={1}
+          value={formData.description}
+          onChange={handleChange}
+          onInput={(e) => {
+            e.target.style.height = "auto";
+            e.target.style.height = e.target.scrollHeight + "px";
+          }}
+          ref={descriptionRef}
+          style={{ overflow: "hidden" }}
+        />
       </Form.Group>
 
       <Row className="mb-3">
         <Col>
           <Form.Group controlId="formDueDate">
-            <Form.Label>Date & Time</Form.Label>
-            <Form.Control type="datetime-local" name="dueDate" value={formData.dueDate} onChange={handleChange} />
+            <Form.Label>Date &amp; Time</Form.Label>
+            <Form.Control
+              type="datetime-local"
+              name="dueDate"
+              value={formData.dueDate}
+              onChange={handleChange}
+              min={getCurrentLocalISO()}
+            />
           </Form.Group>
         </Col>
         <Col>
           <Form.Group controlId="formPriority">
             <Form.Label>Priority</Form.Label>
-            <PrioritySelect value={formData.priority} onChange={(newPriority) => setFormData({ ...formData, priority: newPriority })} />
+            <PrioritySelect
+              value={formData.priority}
+              onChange={(newPriority) =>
+                setFormData({ ...formData, priority: newPriority })
+              }
+            />
           </Form.Group>
         </Col>
       </Row>
@@ -180,40 +214,61 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal }) => {
         <Form.Control type="file" multiple onChange={handleFileChange} />
       </Form.Group>
 
-      {/* Display New Attachments */}
       {attachments.length > 0 && (
         <div className="mb-3">
           <h6>New Attachments:</h6>
           {attachments.map((item, index) => (
-            <div key={index} className="d-flex align-items-center">
-              <input type="text" value={item.customName} onChange={(e) => handleRenameNewFile(index, e.target.value)} className="form-control me-2" />
-              <Button variant="outline-danger" size="sm" onClick={() => handleRemoveNewAttachment(index)}>
-                <FaTrash />
-              </Button>
+            <div key={index} className="attachment-wrapper">
+              <input
+                type="text"
+                value={item.customName}
+                onChange={(e) => handleRenameNewFile(index, e.target.value)}
+                className="form-control attachment-input"
+              />
+              <span
+                className="attachment-delete-btn"
+                onClick={() => handleRemoveNewAttachment(index)}
+              >
+                <FiTrash2 size={18} />
+              </span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Display Existing Attachments */}
       {existingAttachments.length > 0 && (
         <div className="mb-3">
           <h6>Existing Attachments:</h6>
           {existingAttachments.map((item, index) => (
-            <div key={index} className="d-flex align-items-center">
-              <input type="text" value={item.customName} onChange={(e) => handleRenameExistingFile(index, e.target.value)} className="form-control me-2" />
-              <Button variant="outline-danger" size="sm" onClick={() => handleRemoveExistingAttachment(index)}>
-                <FaTrash />
-              </Button>
+            <div key={index} className="attachment-wrapper">
+              <input
+                type="text"
+                value={item.customName}
+                onChange={(e) => handleRenameExistingFile(index, e.target.value)}
+                className="form-control attachment-input"
+              />
+              <span
+                className="attachment-delete-btn"
+                onClick={() => handleRemoveExistingAttachment(index)}
+              >
+                <FiTrash2 size={18} />
+              </span>
             </div>
           ))}
         </div>
       )}
 
-      <Button type="submit" variant="success">{taskToEdit ? "Update Task" : "Add Task"}</Button>
-      <Button variant="secondary" className="ms-2" onClick={closeModal}>Cancel</Button>
+      <div className="button-group">
+        <Button variant="secondary" onClick={closeModal}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="outline-primary">
+          {taskToEdit ? "Save" : "Add Task"}
+        </Button>
+      </div>
     </Form>
   );
 };
 
 export default TaskForm;
+  

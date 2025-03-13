@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Navbar from '../components/Layout/Navbar';
 import '../styles/LandingPage.css';
 
@@ -8,15 +9,20 @@ const LandingPage = () => {
     <>
       <Navbar />
       <main className="landing">
-        <div className="landing-content">
-          <h1>Welcome to MERN ToDo App</h1>
+        <motion.div
+          className="landing-content"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h1>Welcome to Todohive</h1>
           <p>
-            Your productivity companion. Manage your tasks effortlessly and get more done!
+            Your ultimate productivity companion. Manage your tasks effortlessly and get more done with style!
           </p>
-          <Link to="/auth/signup" className="btn btn-primary get-started">
+          <Link to="/auth/signup" className="get-started">
             Get Started
           </Link>
-        </div>
+        </motion.div>
       </main>
     </>
   );

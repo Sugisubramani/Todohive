@@ -1,5 +1,6 @@
+/* Task Container */
 .task-item {
-  height: auto; /* Let the container expand */
+  height: auto;
   max-width: 900px;
   width: 85%;
   padding: 8px 10px;
@@ -11,21 +12,21 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: visible; /* Allow content to be visible if it overflows */
+  overflow: visible;
 }
 
+/* Description */
 .task-item-description {
   font-size: 0.8rem;
   color: #555;
   white-space: normal;
-  max-height: 48px; /* Prevents excessive expansion */
+  max-height: 48px;
   line-height: 1.4;
   overflow: hidden;
   padding-left: 24px;
-  margin-bottom: 5px; /* Avoids overlap with footer */
+  margin-bottom: 5px;
 }
 
-/* Default footer: fixed height for tasks without attachments */
 .task-item-footer {
   display: flex;
   align-items: center;
@@ -33,16 +34,16 @@
   gap: 5px;
   padding: 3px 15px;
   border-top: 1px solid #eee;
-  height: 20px;
+  min-height: 20px; /* Use min-height to allow growth when needed */
   overflow: visible;
 }
 
-/* Expanded footer when attachments exist */
+
 .task-item-footer.expanded-footer {
   height: auto;
 }
 
-/* Task Header */
+/* Header */
 .task-item-header {
   display: flex;
   align-items: center;
@@ -50,16 +51,25 @@
   gap: 8px;
 }
 
-/* Task Title */
+/* Title */
 .task-title {
   flex-grow: 1;
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: bold;
   color: #333;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+
+/* Title text gets struck through when completed */
+.task-item.completed .title-text {
+  text-decoration: line-through;
+  opacity: 1 !important; /* No fading */
+  color: #333 !important;
 }
 
 /* Due Date */
@@ -69,7 +79,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding-left: 4px;
+  padding-left: 9px;
 }
 
 .task-due-date .icon-date {
@@ -77,7 +87,7 @@
   color: #777;
 }
 
-/* Priority Label */
+/* Priority */
 .task-priority {
   font-size: 0.7rem;
   font-weight: bold;
@@ -86,15 +96,15 @@
 
 .task-priority.high { 
   color: red;
-  padding-left: 4px;
+  padding-left: 9px;
 }
 .task-priority.medium { 
   color: orange;
-  padding-left: 4px;
+  padding-left: 9px;
 }
 .task-priority.low { 
   color: green;
-  padding-left: 4px;
+  padding-left: 9px;
 }
 
 /* Attachments */
@@ -103,7 +113,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 3px;
-  padding-left: 3px;
+  padding-left: 7px;
 }
 
 .attachment-item {
@@ -129,14 +139,91 @@
   padding: 2px 6px;
 }
 
-/* Completed Task */
-/* Only fade the title, not the whole container */
-.task-item.completed .task-title {
-  opacity: 0.5;
-  color: #888;
-  text-decoration: line-through;
-}
-
 .task-item.completed .task-actions .btn-primary {
   display: none;
 }
+
+.task-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+}
+
+/* Status Label */
+.status-label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.status-label.pending {
+  color: #B8860B; /* Orangish yellow (DarkGoldenrod) */
+  background-color: rgba(184, 134, 11, 0.1);
+}
+
+.status-label.completed {
+  color: #2E8B57; /* SeaGreen */
+  background-color: rgba(46, 139, 87, 0.1);
+}
+
+/* Ensure the status label in a completed task remains unstruck */
+.task-item.completed .status-label {
+  display: inline-block;
+  text-decoration: none !important;
+  opacity: 1 !important;
+  /* For Completed, force green */
+  color: #2E8B57 !important;
+}
+
+/* Action Buttons: Hide by default, show on hover */
+.task-item .action-buttons {
+  display: none;
+}
+
+.task-item:hover .action-buttons {
+  display: block;
+}
+
+.complete-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 19px;
+  height: 19px;
+  border: 2px solid #ccc; /* Light gray border */
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  top: 1px;
+  transition: border-color 0.2s, background-color 0.2s;
+  background-color: #fff;
+}
+
+/* When hovering, show a check mark in gray */
+.complete-toggle:hover::after {
+  content: "\2713";
+  font-size: 12px;
+  color: #888; /* Gray tick on hover */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* When checked, update the border and tick to blue */
+.complete-toggle:checked {
+  border-color: hsl(211, 100%, 50%);
+}
+
+.complete-toggle:checked::after {
+  content: "\2713";
+  font-size: 12px;
+  color: hsl(211, 100%, 50%)  ;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+

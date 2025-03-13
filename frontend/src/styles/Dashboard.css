@@ -21,14 +21,16 @@
   transition: width 0.3s ease-in-out;
   background-color: white;
   border-right: 1px solid #ddd;
-  padding: 10px;
+  padding: 12px;
   overflow-y: auto;
-    min-width: 80px;
-    max-width: 280px;
+  min-width: 50px; /* Or remove min-width if unnecessary */
+  max-width: 280px;
 }
 
 .sidebar.collapsed {
-  width: 80px;
+  width: 50px; /* Match the Sidebar.css setting */
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Header */
@@ -47,8 +49,15 @@
   font-weight: bold;
   color: #007bff;
   cursor: pointer;
+  transition: color 0.3s ease-in-out;
 }
 
+.main-add-task:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Task Card */
 .task-card {
   background: white;
   padding: 8px;
@@ -59,10 +68,9 @@
   gap: 4px;
   position: relative;
   z-index: 1;
-  min-height: 100 px; /* Use min-height to set default size for tasks without attachments */
+  min-height: 100px;
   overflow: visible;  /* Allow the card to expand if attachments push content */
 }
-
 
 /* Task Header */
 .task-header {
@@ -115,4 +123,28 @@
   background-color: #0056b3;
 }
 
-  
+/* Hover effect for main Add Task link */
+.main-add-task {
+  transition: color 0.3s ease-in-out;
+}
+
+.main-add-task:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* Hover effect for task card */
+.task-card:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-trash-btn {
+  transition: transform 0.2s;
+  cursor: pointer;
+  color: #dc3545; /* Force delete red */
+}
+
+.header-trash-btn:hover {
+  transform: scale(1.05);
+}

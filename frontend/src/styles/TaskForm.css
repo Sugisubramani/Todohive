@@ -3,26 +3,79 @@
   width: 100%;
 }
 
+/* Apply the same style to both input and textarea */
 .task-form .form-control {
   font-size: 1rem;
   height: 2.5rem;
+  padding: 0.375rem 0.75rem;
 }
 
-/* Textarea adjustments */
+/* Override textarea styling to match input initially */
 .task-form textarea.form-control {
-  min-height: 3rem; /* Increased for better input experience */
-  resize: vertical;
+  height: 2.5rem;       /* Same initial height as input */
+  min-height: 2.5rem;   /* Prevent it from being taller initially */
+  font-size: 1rem;
+  padding: 0.375rem 0.75rem;
+  resize: none;
+  overflow: hidden;
 }
 
-/* Combined row */
+/* Combined row styling */
 .task-form .combined-row {
   display: flex;
-  flex-wrap: wrap; /* Ensures responsiveness */
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1rem;
 }
 
 .task-form .combined-row > div {
   flex: 1;
-  min-width: 150px; /* Prevents elements from shrinking too much */
+  min-width: 150px;
+}
+
+/* Button group styling to align buttons to the left */
+.task-form .button-group {
+  display: flex;
+  justify-content: right;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Force every button in the button group to be the same size */
+.task-form .button-group .btn {
+  min-width: 80px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Attachment Field Styling */
+.attachment-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.attachment-input {
+  width: 100%;
+  padding-right: 40px; /* space for the trash icon inside */
+}
+
+/* Trash icon positioned inside the attachment field */
+.attachment-delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #dc3545 !important;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.attachment-delete-btn:hover {
+  transform: scale(1.05);
 }

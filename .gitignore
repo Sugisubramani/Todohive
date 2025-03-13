@@ -20,3 +20,4 @@ backend/yarn-error.log*
 
 # MISC
 .DS_Store
+node_modules
