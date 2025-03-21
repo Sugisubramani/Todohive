@@ -30,34 +30,37 @@ exports.verifyEmail = async (req, res) => {
   const { token } = req.query;
   console.log("Received verification token:", token);
 
-  try {
-    if (!token) {
-      return res.status(400).json({ message: 'Missing verification token' });
-    }
+  if (!token) {
+    return res.status(400).json({ message: 'Missing verification token' });
+  }
 
-    const user = await User.findOne({ verificationToken: token });
+  const user = await User.findOne({ verificationToken: token });
 
-    if (!user) {
-      console.error("No user found for token:", token);
-      return res.status(400).json({ message: 'Invalid or expired token' });
-    }
+  // If no user found, check if already verified (optional)
+  if (!user) {
+    // Optionally, look up by email or other identifier if you store that elsewhere.
+    return res.status(400).json({ message: 'Invalid or expired token' });
+  }
 
-    user.emailVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
-
-    const payload = { user: { id: user.id, name: user.name, email: user.email } };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    res.json({
-      message: 'Email verified successfully.',
-      token: jwtToken,
+  if (user.emailVerified) {
+    return res.json({
+      message: 'Email is already verified.',
       user: { id: user.id, name: user.name, email: user.email }
     });
-  } catch (err) {
-    console.error("Email verification error:", err);
-    res.status(500).json({ message: 'Internal Server Error' });
   }
+
+  user.emailVerified = true;
+  user.verificationToken = undefined;
+  await user.save();
+
+  const payload = { user: { id: user.id, name: user.name, email: user.email } };
+  const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+  res.json({
+    message: 'Email verified successfully.',
+    token: jwtToken,
+    user: { id: user.id, name: user.name, email: user.email }
+  });
 };
 
 exports.login = async (req, res) => {

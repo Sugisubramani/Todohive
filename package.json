@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "date-fns": "^2.29.3",
+    "react-clock": "^5.1.0",
+    "react-datepicker": "^8.2.1",
+    "react-time-picker": "^7.0.0"
+  }
+}

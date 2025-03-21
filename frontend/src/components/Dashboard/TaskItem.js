@@ -1,57 +1,33 @@
+// File: src/components/Dashboard/TaskItem.js
 import React, { useState } from "react";
 import axios from "axios";
+import { createPortal } from "react-dom";
 import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
 import "../../styles/TaskItem.css";
+import moment from "moment";
 
 const formatDueDateDisplay = (dueDateString) => {
   if (!dueDateString) return "";
 
-  const dueDate = new Date(dueDateString);
-  const now = new Date();
-
-  // Extract time
-  let hours = dueDate.getHours();
-  const minutes = dueDate.getMinutes();
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12 || 12;
-  const formattedMinutes = minutes < 10 ? "0" + minutes : minutes;
-  const timeString = `${hours}:${formattedMinutes} ${ampm}`;
-
-  // Get today’s date at midnight
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueStart = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  const diffDays = (dueStart - todayStart) / (1000 * 60 * 60 * 24);
-
-  // Get this week's Sunday (last day of the current week)
-  const thisSunday = new Date(todayStart);
-  thisSunday.setDate(thisSunday.getDate() + (7 - thisSunday.getDay()));
-
-  if (diffDays === 0) return `Today ${timeString}`;
-  if (diffDays === 1) return `Tomorrow ${timeString}`;
-  if (dueStart <= thisSunday) {
-    // If it's still in this week (before or on Sunday), show the day name
-    const weekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return `${weekdayNames[dueDate.getDay()]} ${timeString}`;
+  // Parse the string in UTC
+  const mUtc = moment.utc(dueDateString);
+  
+  // If the stored time is exactly midnight in UTC, treat as date-only.
+  if (mUtc.hour() === 0 && mUtc.minute() === 0 && mUtc.second() === 0) {
+    return mUtc.format("D MMMM YYYY");
   }
-
-  // If it's next week or later, show full date
-  const day = dueDate.getDate();
-  const monthNames = ["January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"];
-  const month = monthNames[dueDate.getMonth()];
-  const year = dueDate.getFullYear();
-
-  return `${day} ${month} ${year} ${timeString}`;
+  
+  // Otherwise, show both date and time (converted to local time)
+  return moment(dueDateString).format("D MMMM YYYY, h:mm A");
 };
+
 
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
+  const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
-  // Clicking the entire item (if not completed) opens the view form
   const handleItemClick = () => {
-    if (!task.completed) {
-      onEditTask(task);
-    }
+    if (!task.completed) onEditTask(task);
   };
 
   const toggleComplete = async (e) => {
@@ -82,56 +58,37 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   };
 
-  const hasFooter =
-    task.dueDate ||
-    (task.attachments && task.attachments.length > 0) ||
-    task.priority;
-
-  const now = new Date();
-  const dueDatePassed = task.dueDate ? new Date(task.dueDate) < now : false;
+  // Compute if due date has passed inline.
+  const dueDatePassed = task.dueDate ? new Date(task.dueDate) < new Date() : false;
   const statusLabel = task.completed
     ? "Completed"
     : (!task.completed && dueDatePassed ? "Pending" : "");
 
   return (
-    <div
-      className={`card task-item ${task.completed ? "completed" : ""}`}
-      onClick={handleItemClick}
-    >
+    <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
       <div className="card-body p-2">
-        {/* Header: Checkbox, Title, Status, and Action Button */}
+        {/* Header */}
         <div className="task-item-header">
           <input
             type="checkbox"
-            className="complete-toggle"  // Changed from form-check-input to complete-toggle
+            className="complete-toggle"
             checked={task.completed}
             onChange={toggleComplete}
             onClick={(e) => e.stopPropagation()}
           />
           <h5 className="task-title">
             <span className="title-text">{task.title}</span>
-            {statusLabel && (
-              <span className={`status-label ${statusLabel.toLowerCase()}`}>
-                {statusLabel}
-              </span>
-            )}
+            {statusLabel && <span className={`status-label ${statusLabel.toLowerCase()}`}>{statusLabel}</span>}
           </h5>
           <div className="action-buttons">
             {task.completed ? (
-              <button
-                className="btn btn-outline-danger btn-sm"
-                onClick={handleDelete}
-                style={{ minWidth: "80px" }}
-              >
+              <button className="btn btn-outline-danger btn-sm" onClick={handleDelete} style={{ minWidth: "80px" }}>
                 Delete
               </button>
             ) : (
               <button
                 className="btn btn-outline-primary btn-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditTask(task);
-                }}
+                onClick={(e) => { e.stopPropagation(); onEditTask(task); }}
                 style={{ minWidth: "80px" }}
               >
                 View
@@ -145,13 +102,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           <div className={`task-item-description ${expanded ? "expanded" : ""}`}>
             <p className="mb-0">{task.description}</p>
             {task.description.length > 100 && (
-              <button
-                className="btn btn-link btn-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpanded(!expanded);
-                }}
-              >
+              <button className="btn btn-link btn-sm" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
                 {expanded ? "Show Less" : "Show More"}
               </button>
             )}
@@ -159,31 +110,55 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
         )}
 
         {/* Footer */}
-        {hasFooter && (
-          <div className="task-item-footer">
-            {task.dueDate && (
-              <div className="task-due-date">
-                <FaRegCalendarAlt className="icon-date" />
-                <small>{formatDueDateDisplay(task.dueDate)}</small>
-              </div>
-            )}
+        <div className="task-item-footer">
+          {task.dueDate && (
+            <div className="task-due-date">
+              <FaRegCalendarAlt className="icon-date" />
+              <small>{formatDueDateDisplay(task.dueDate)}</small>
+            </div>
+          )}
+          {task.priority && (
+            <div className={`task-priority ${task.priority.toLowerCase()}`}>
+              <small>Priority: {task.priority}</small>
+            </div>
+          )}
+          {task.attachments && task.attachments.length > 0 && (
+            <div className="task-attachments">
+              <FaPaperclip className="clip-icon" />
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowAttachmentsModal(true); }}
+                className="attachments-link"
+              >
+                Attachments ({task.attachments.length})
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
-            {task.priority && (
-              <div className={`task-priority ${task.priority.toLowerCase()}`}>
-                <small>Priority: {task.priority}</small>
-              </div>
-            )}
-
-            {task.attachments && task.attachments.length > 0 && (
-              <div className="task-attachments">
+      {showAttachmentsModal &&
+        createPortal(
+          <div
+            className="ti-modal-overlay"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowAttachmentsModal(false);
+            }}
+          >
+            <div className="ti-modal-content" onClick={(e) => e.stopPropagation()}>
+              <h5 className="ti-modal-title">{task.title}</h5>
+              <hr className="ti-modal-separator" />
+              <ul>
                 {task.attachments.map((file, index) => {
                   const fileName = file.split(/[\\/]/).pop();
                   const displayName = fileName.includes("-")
                     ? fileName.substring(fileName.indexOf("-") + 1)
                     : fileName;
                   return (
-                    <div key={index} className="attachment-item">
-                      <FaPaperclip className="icon-clip" />
+                    <li key={index} className="ti-small-attachment">
+                      <span className="ti-bullet">&#8226;</span>
                       <a
                         href={`http://localhost:5000/uploads/${fileName}`}
                         target="_blank"
@@ -191,14 +166,18 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
                       >
                         {displayName}
                       </a>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+              </ul>
+              <button className="btn btn-secondary" onClick={() => setShowAttachmentsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )
+      }
     </div>
   );
 };

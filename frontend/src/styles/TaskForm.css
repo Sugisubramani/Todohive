@@ -79,3 +79,11 @@
 .attachment-delete-btn:hover {
   transform: scale(1.05);
 }
+
+/* Position the calendar popup above the input */
+.custom-datetime-picker .rdtPicker {
+  top: auto !important;
+  bottom: calc(100% + 5px) !important;
+  z-index: 9999;
+}
+  

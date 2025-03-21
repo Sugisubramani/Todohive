@@ -3,13 +3,14 @@ import axios from 'axios';
 import TaskList from '../components/Dashboard/TaskList';
 import Sidebar from '../components/Dashboard/Sidebar';
 import { Modal, Button } from 'react-bootstrap';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiSearch } from 'react-icons/fi';  // Added FiSearch for magnifier icon
 import TaskForm from '../components/Dashboard/TaskForm';
 import '../styles/Dashboard.css';
 
 const DashboardPage = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState('All');
+  const [searchText, setSearchText] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
 
@@ -22,25 +23,31 @@ const DashboardPage = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  // Wrap fetchTasks in useCallback so that it's memoized based on priorityFilter.
+  // Update fetchTasks to include search query
   const fetchTasks = useCallback(async (currentPage = 1) => {
     try {
       let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
       if (priorityFilter !== 'All') {
         url += `&priority=${priorityFilter}`;
       }
+      if (searchText) {
+        url += `&search=${encodeURIComponent(searchText)}`;
+      }
       const res = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       const fetchedTasks = res.data.tasks;
-      setTasks(fetchedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      setTasks(
+        fetchedTasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      );
       setPages(res.data.pages);
       setPage(res.data.page);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
-  }, [priorityFilter]);
+  }, [priorityFilter, searchText]);
 
+  // Call fetchTasks whenever dependencies change
   useEffect(() => {
     fetchTasks(1);
   }, [fetchTasks]);
@@ -87,14 +94,33 @@ const DashboardPage = () => {
             + Add Task
           </a>
         </div>
+        {/* Updated Search Bar with Magnifier Icon */}
+        <div className="search-bar text-center mb-1">
+          <div className="search-input-container">
+            <FiSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        </div>
         <div className="task-list-container">
-          <TaskList
-            tasks={tasks}
-            fetchTasks={fetchTasks}
-            openEditTaskModal={openEditTaskModal}
-            pages={pages}
-            page={page}
-          />
+          {tasks.length > 0 ? (
+            <TaskList
+              tasks={tasks}
+              fetchTasks={fetchTasks}
+              openEditTaskModal={openEditTaskModal}
+              pages={pages}
+              page={page}
+            />
+          ) : (
+            <div className="no-tasks-message">
+              {searchText ? `No tasks found for "${searchText}"` : 'No tasks found.'}
+            </div>
+          )}
         </div>
       </div>
       <Modal show={showModal} onHide={closeModal} centered>

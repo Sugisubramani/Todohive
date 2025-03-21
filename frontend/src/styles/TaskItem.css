@@ -1,3 +1,50 @@
+/* --- Updated Modal Styles for TaskItem --- */
+
+/* Remove center alignment for modal content if needed */
+.ti-modal-content {
+  background-color: #fff !important;
+  padding: 20px;
+  border-radius: 6px;
+  max-width: 300px;
+  width: 90%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  color: #333;
+  transform: translateY(-10px);
+  animation: tiSlideIn 0.3s forwards;
+  /* Remove text-align center to allow left alignment for header */
+  text-align: left;
+}
+
+@keyframes tiSlideIn {
+  to { transform: translateY(0); }
+}
+
+.ti-modal-content h5 {
+  margin-top: 0;
+  margin-bottom: 5px; /* Reduced bottom margin */
+  font-size: 1.4rem;
+  color: #333;
+  text-align: left; /* Left align the title */
+}
+
+/* Separator line below the modal title */
+.ti-modal-separator {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 0 0 10px 0;
+}
+
+/* --- Updated Clip Icon in TaskItem --- */
+
+/* This clip icon is used in the attachments section */
+.clip-icon {
+  font-size: 0.9rem;   /* Adjust size as needed */
+  margin-right: 5px;
+  color: #007bff;
+}
+
+/* --- The rest of your CSS remains unchanged --- */
+
 /* Task Container */
 .task-item {
   height: auto;
@@ -5,7 +52,7 @@
   width: 85%;
   padding: 8px 10px;
   border-radius: 6px;
-  margin: 5px auto;
+  margin: 4px auto;
   background: white;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
@@ -34,10 +81,9 @@
   gap: 5px;
   padding: 3px 15px;
   border-top: 1px solid #eee;
-  min-height: 20px; /* Use min-height to allow growth when needed */
+  min-height: 20px;
   overflow: visible;
 }
-
 
 .task-item-footer.expanded-footer {
   height: auto;
@@ -68,7 +114,7 @@
 /* Title text gets struck through when completed */
 .task-item.completed .title-text {
   text-decoration: line-through;
-  opacity: 1 !important; /* No fading */
+  opacity: 1 !important;
   color: #333 !important;
 }
 
@@ -116,15 +162,19 @@
   padding-left: 7px;
 }
 
-.attachment-item {
-  display: flex;
-  align-items: center;
-  font-size: 0.75rem;
+.attachments-link {
+  background: none;
+  border: none;
   color: #007bff;
+  text-decoration: none;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  background: rgba(0, 123, 255, 0.1);
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.attachments-link:hover {
+  color: #0056b3;
+  text-decoration: none;
 }
 
 /* Action Buttons */
@@ -158,21 +208,19 @@
 }
 
 .status-label.pending {
-  color: #B8860B; /* Orangish yellow (DarkGoldenrod) */
+  color: #B8860B;
   background-color: rgba(184, 134, 11, 0.1);
 }
 
 .status-label.completed {
-  color: #2E8B57; /* SeaGreen */
+  color: #2E8B57;
   background-color: rgba(46, 139, 87, 0.1);
 }
 
-/* Ensure the status label in a completed task remains unstruck */
 .task-item.completed .status-label {
   display: inline-block;
   text-decoration: none !important;
   opacity: 1 !important;
-  /* For Completed, force green */
   color: #2E8B57 !important;
 }
 
@@ -190,7 +238,7 @@
   appearance: none;
   width: 19px;
   height: 19px;
-  border: 2px solid #ccc; /* Light gray border */
+  border: 2px solid #ccc;
   border-radius: 50%;
   position: relative;
   cursor: pointer;
@@ -200,18 +248,16 @@
   background-color: #fff;
 }
 
-/* When hovering, show a check mark in gray */
 .complete-toggle:hover::after {
   content: "\2713";
   font-size: 12px;
-  color: #888; /* Gray tick on hover */
+  color: #888;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
 
-/* When checked, update the border and tick to blue */
 .complete-toggle:checked {
   border-color: hsl(211, 100%, 50%);
 }
@@ -219,11 +265,113 @@
 .complete-toggle:checked::after {
   content: "\2713";
   font-size: 12px;
-  color: hsl(211, 100%, 50%)  ;
+  color: hsl(211, 100%, 50%);
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
 }
 
+/* Modern Modal Styles for TaskItem (Other styles remain the same) */
+/* ... */
+.ti-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+  opacity: 0;
+  animation: tiFadeIn 0.3s forwards;
+}
 
+@keyframes tiFadeIn {
+  to { opacity: 1; }
+}
+
+.ti-modal-content {
+  background-color: #fff !important;
+  padding: 20px;
+  border-radius: 6px;
+  max-width: 300px;
+  width: 90%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  color: #333;
+  transform: translateY(-10px);
+  animation: tiSlideIn 0.3s forwards;
+  text-align: left; /* Left align content for modal */
+}
+
+@keyframes tiSlideIn {
+  to { transform: translateY(0); }
+}
+
+.ti-modal-content h5 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.4rem;
+  color: #333;
+  text-align: left; /* Left align the modal title */
+}
+
+.ti-modal-separator {
+  display: block;
+  height: 1px;
+  background-color: #eee;
+  border: none;
+  margin: 0 0 10px 0;
+}
+
+
+
+.ti-modal-content ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 10px;
+}
+
+.ti-modal-content li {
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+}
+
+.ti-bullet {
+  color: black;
+  margin-right: 4px;
+}
+
+.ti-modal-content a {
+  color: #007bff;
+  text-decoration: none !important;
+  font-weight: 500;
+}
+
+.ti-modal-content a:hover {
+  text-decoration: underline;
+}
+
+.ti-modal-content .btn-secondary {
+  background-color: #6c757d;
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.ti-modal-content .btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.ti-small-attachment {
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+}

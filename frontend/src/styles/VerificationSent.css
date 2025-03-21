@@ -1,0 +1,109 @@
+/* Icon Container Styles */
+.todoist-icon-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Icon Style */
+.todoist-icon {
+  font-size: 48px; /* Adjust size as needed */
+  color: #007bff;  /* Bootstrap primary color */
+}
+
+/* Existing styles remain unchanged */
+
+.todoist-verification-page {
+  min-height: 100vh;
+  background: #f7f9fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  padding: 20px;
+}
+
+.todoist-card {
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  width: 90%;
+  max-width: 700px;
+  text-align: center;
+}
+
+.todoist-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.todoist-text {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.todoist-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+}
+
+.todoist-button-row {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.todoist-button-row .todoist-btn {
+  min-width: 160px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.todoist-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.resend-btn {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.resend-btn:hover {
+  background-color: #0069d9;
+  transform: translateY(-1px);
+}
+
+.resend-btn:disabled {
+  background-color: #80bdff;
+  cursor: not-allowed;
+}
+
+.open-mail-btn {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.open-mail-btn:hover {
+  background-color: #0069d9;
+  transform: translateY(-1px);
+}
+
+.todoist-message {
+  font-size: 14px;
+  color: #333;
+  margin-top: 10px;
+}

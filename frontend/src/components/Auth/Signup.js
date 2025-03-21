@@ -14,14 +14,17 @@ const Signup = () => {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const togglePasswordVisibility = () => setPasswordVisible((prev) => !prev);
+  const togglePasswordVisibility = () => setPasswordVisible(prev => !prev);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5000/api/auth/signup', formData);
       console.log(res.data);
-      navigate('/auth/verification-sent');
+      // Store the signup email in localStorage as a fallback
+      localStorage.setItem("signupEmail", formData.email);
+      // Navigate to the verification page with the email in the query parameters
+      navigate(`/auth/verification-sent?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       console.error(error);
       setMessage(error.response?.data?.message || "Signup failed. Please try again.");

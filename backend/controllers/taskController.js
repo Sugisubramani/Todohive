@@ -16,16 +16,28 @@ exports.createTask = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const { page = 1, priority } = req.query;
+    const { page = 1, priority, search } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
     
-    // Build the query object with the user filter
+    // Base query with user and optional priority filter
     const queryObj = { user: req.user.id };
-    
-    // Only filter by priority if a valid option is provided (not the default "Priority")
     if (priority && priority !== 'Priority') {
       queryObj.priority = priority;
+    }
+    
+    if (search) {
+      // Create an exact match regex for title (case-insensitive)
+      const exactRegex = new RegExp(`^${search}$`, 'i');
+      const exactCount = await Task.countDocuments({ ...queryObj, title: exactRegex });
+      
+      if (exactCount > 0) {
+        // Use exact match if available
+        queryObj.title = exactRegex;
+      } else {
+        // Otherwise, use a partial match on title only (no description hints)
+        queryObj.title = new RegExp(search, 'i');
+      }
     }
     
     const tasks = await Task.find(queryObj)
@@ -56,9 +68,6 @@ exports.updateTask = async (req, res) => {
       }
     }
 
-    // Debug log commented out:
-    // console.log("Received existingAttachments:", existingAttachments);
-
     let renamedAttachments = [];
     // Collect original paths from the attachments being renamed
     let originalsToRemove = [];
@@ -76,14 +85,9 @@ exports.updateTask = async (req, res) => {
       let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
       let newPath = path.join(__dirname, "..", "uploads", file.newName);
 
-      // Debug log commented out:
-      // console.log(`Checking file: ${oldPath}`);
-
       if (fs.existsSync(oldPath)) {
         try {
           fs.renameSync(oldPath, newPath);
-          // Debug log commented out:
-          // console.log(`Renamed: ${oldPath} ➝ ${newPath}`);
           renamedAttachments.push(`/uploads/${file.newName}`);
           originalsToRemove.push(file.originalPath);
         } catch (err) {
@@ -113,7 +117,6 @@ exports.updateTask = async (req, res) => {
     if (req.body.completed !== undefined) task.completed = req.body.completed;
 
     // Merge existing attachments with renamed and new attachments.
-    // If no attachment changes are provided, the attachments remain unchanged.
     if (renamedAttachments.length > 0 || newAttachments.length > 0) {
       task.attachments = [...new Set([...task.attachments, ...renamedAttachments, ...newAttachments])];
     }

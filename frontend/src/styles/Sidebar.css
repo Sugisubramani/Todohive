@@ -1,240 +1,249 @@
-    /* Sidebar Container */
-    .sidebar {
-        width: 280px;
-        height: 100vh;
-        background-color: #f8f9fa;
-        padding: 1rem;
-        transition: width 0.3s ease-in-out;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        border-right: 1px solid #ddd;
-    }
+/* Sidebar Container */
+.sidebar {
+    width: 280px;
+    height: 100vh;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    transition: width 0.3s ease-in-out;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    /* Thicker, blue border for impact */
+    box-shadow: 2px 0 5px rgba(0, 123, 255, 0.2);
+    /* Subtle shadow for depth */
+}
 
-    /* Collapsed Sidebar */
-    .sidebar.collapsed {
-        width: 50px;
-    }
-
-    /* Keep Toggle Button Always Visible */
-    .toggle-btn {
-        position: absolute;
-        top: 12px;
-        right: 10px;
-        font-size: 1.1rem;
-        cursor: pointer;
-        border: none;
-        background: transparent;
-        z-index: 1000;
-    }
-
-    /* Sidebar Header */
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-
-    /* Profile Container */
-    .profile-container {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 1rem;
-    }
-
-    /* Profile Icon - Always Visible (Smaller) */
-    .profile-icon {
-        width: 30px;         /* Reduced width */
-        height: 30px;        /* Reduced height */
-        font-size: 1rem;     /* Reduced font size */
-        line-height: 30px;
-        text-align: center;
-        background-color: #007bff;
-        color: #fff;
-        border-radius: 50%;
-    }
-
-    /* Username styling - Smaller font size */
-    .sidebar-text {
-        font-size: 1rem;   /* Smaller font size for username */
-    }
-
-    /* Profile Name & Dropdown Arrow - Hidden When Collapsed */
-    .sidebar.collapsed .profile-container .sidebar-text,
-    .sidebar.collapsed .profile-container .dropdown-arrow {
-        display: none;
-    }
-
-    /* Sidebar Content */
-    .sidebar-content {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    /* Ensure sidebar content doesn't disappear completely */
-    .sidebar.collapsed .sidebar-content {
-        display: none;
-    }
+/* Collapsed Sidebar */
+.sidebar.collapsed {
+    width: 50px;
+    /* Optional: you can also change the border when collapsed if needed */
+}
 
 
-    /* Custom styles for buttons (Add Task and Priority Filter Toggle) */
-    .custom-white-button {
-        background-color: #fff !important;
-        border: 1px solid #ced4da !important;
-        color: #212529 !important;
-        font-size: 1rem;
-        font-weight: 400;
-        padding: 0.5rem 1rem !important;
-        border-radius: 0.25rem !important;
-        width: 100%; /* Ensures button width is full */
-        text-align: left !important; /* Align text to the left */
-        display: flex;
-        align-items: center;
-        justify-content: flex-start !important; /* Align items to start */
-    }
+/* Keep Toggle Button Always Visible */
+.toggle-btn {
+    position: absolute;
+    top: 12px;
+    right: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    z-index: 1000;
+}
 
-    /* Adjust Add Task button text alignment */
-    .custom-white-button.add-task-button {
-        color: #007bff !important;
-        border: 1px solid #ced4da !important;
-        text-align: left !important;
-        display: flex;
-        align-items: center;
-        justify-content: flex-start !important;
-        padding-left: 15px !important; /* Reduced padding for left alignment */
-    }
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
 
-    /* General hover effect for all buttons (no border change) */
-    .custom-white-button:hover {
-        background-color: #e2e6ea !important;
-        color: #000 !important;
-    }
+/* Profile Container */
+.profile-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
 
-    /* Priority Filter button hover (removing border change) */
-    .priority-filter .dropdown-toggle:hover {
-        background-color: #e2e6ea !important;
-    }
+/* Profile Icon - Always Visible (Smaller) */
+.profile-icon {
+    width: 30px;         /* Reduced width */
+    height: 30px;        /* Reduced height */
+    font-size: 1rem;     /* Reduced font size */
+    line-height: 30px;
+    text-align: center;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: #fff;
+    border-radius: 50%;
+}
 
-    /* Priority Filter - Only Text Changes Color */
-    .dropdown-toggle.custom-white-button.priority-high {
-        color: red !important;
-        border-color: #ced4da !important;
-    }
+/* Username styling - Smaller font size */
+.sidebar-text {
+    font-size: 1rem;   /* Smaller font size for username */
+}
 
-    .dropdown-toggle.custom-white-button.priority-medium {
-        color: orange !important;
-        border-color: #ced4da !important;
-    }
+/* Profile Name & Dropdown Arrow - Hidden When Collapsed */
+.sidebar.collapsed .profile-container .sidebar-text,
+.sidebar.collapsed .profile-container .dropdown-arrow {
+    display: none;
+}
 
-    .dropdown-toggle.custom-white-button.priority-low {
-        color: green !important;
-        border-color: #ced4da !important;
-    }
+/* Sidebar Content */
+.sidebar-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
 
-    /* Modify dropdown toggle to left align text */
-    .dropdown-toggle.custom-white-button {
-        display: flex;
-        justify-content: flex-start !important;
-        align-items: center;
-        text-align: left !important;
-        padding-left: 15px; /* Ensure left padding is consistent */
-    }
-
-    /* Ensure Priority Filter dropdown matches button width */
-    .priority-filter .dropdown-menu {
-        width: 100% !important;
-        min-width: unset !important;
-        text-align: left;  /* Align dropdown items to left */
-    }
-
-    /* Ensure selected priority text is left aligned */
-    .dropdown-toggle.custom-white-button.priority-high,
-    .dropdown-toggle.custom-white-button.priority-medium,
-    .dropdown-toggle.custom-white-button.priority-low {
-        justify-content: flex-start !important;
-        text-align: left !important;
-    }
-
-    /* Sidebar links hover */
-    .sidebar a {
-        text-decoration: none;
-        color: #212529;
-        transition: color 0.3s ease-in-out;
-    }
-
-    .sidebar a:hover {
-        color: #007bff;
-        text-decoration: underline;
-    }
-
-    /* Hover effect for collapsed sidebar buttons */
-    .sidebar.collapsed .custom-white-button:hover {
-        background-color: #f0f0f0 !important;
-    }
-
-    /* --- Specific hover rule for Add Task button (mirrors priority button hover, but without border change) --- */
-    .sidebar .custom-white-button.add-task-button:hover,
-    .sidebar .custom-white-button.add-task-button:focus {
-        background-color: #e2e6ea !important;
-        color: #007bff !important; /* Preserve blue text */
-    }
-
-    /* Hide the default caret arrow provided by react-bootstrap */
-    .dropdown-toggle::after {
-        display: none !important;
-    }
-
-    /* Custom Dropdown Arrow for Profile */
-    .custom-caret {
-        margin-left: 5px;
-        font-size: 0.7rem;
-        color: #212529;
-    }
-
-    /* Custom Dropdown Arrow for Priority Filter */
-    .priority-caret {
-        display: none;
-        margin-left: auto;
-        font-size: 0.7rem;
-        color: #212529;
-    }
-
-    /* Show the priority caret when hovering over the sidebar */
-    .sidebar:hover .priority-caret {
-        display: inline-block;
-    }
-
-    /* Hide the default caret arrow provided by react-bootstrap */
-    .dropdown-toggle::after {
-        display: none !important;
-    }
-
-    /* Custom Dropdown Arrow for Profile (always visible) */
-    .custom-caret {
-        margin-left: 5px;
-        font-size: 0.7rem;
-        color: #212529;
-    }
-
-    /* Custom Dropdown Arrow for Priority Filter */
-    .priority-caret {
-        margin-left: auto;
-        font-size: 0.7rem;
-        color: #212529;
-    }
+/* Ensure sidebar content doesn't disappear completely */
+.sidebar.collapsed .sidebar-content {
+    display: none;
+}
 
 
-    /* Show the priority caret when hovering over the sidebar */
-    .sidebar:hover .priority-caret {
-        display: inline-block;
-    }
+/* Custom styles for buttons (Add Task and Priority Filter Toggle) */
+.custom-white-button {
+    background-color: #fff !important;
+    border: 1px solid #ced4da !important;
+    color: #212529 !important;
+    font-size: 1rem;
+    font-weight: 400;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.25rem !important;
+    width: 100%;
+    /* Ensures button width is full */
+    text-align: left !important;
+    /* Align text to the left */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important;
+    /* Align items to start */
+}
 
- 
+/* Adjust Add Task button text alignment */
+.custom-white-button.add-task-button {
+    color: #007bff !important;
+    border: 1px solid #ced4da !important;
+    text-align: left !important;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important;
+    padding-left: 15px !important; /* Reduced padding for left alignment */
+}
 
-    /* Optionally adjust the toggle button when collapsed */
-    .sidebar.collapsed .toggle-btn {
-        right: 5px;
-    }
+/* General hover effect for all buttons (no border change) */
+.custom-white-button:hover {
+    background-color: #e2e6ea !important;
+    color: #000 !important;
+}
+
+/* Priority Filter button hover (removing border change) */
+.priority-filter .dropdown-toggle:hover {
+    background-color: #e2e6ea !important;
+}
+
+/* Priority Filter - Only Text Changes Color */
+.dropdown-toggle.custom-white-button.priority-high {
+    color: red !important;
+    border-color: #ced4da !important;
+}
+
+.dropdown-toggle.custom-white-button.priority-medium {
+    color: orange !important;
+    border-color: #ced4da !important;
+}
+
+.dropdown-toggle.custom-white-button.priority-low {
+    color: green !important;
+    border-color: #ced4da !important;
+}
+
+/* Modify dropdown toggle to left align text */
+.dropdown-toggle.custom-white-button {
+    display: flex;
+    justify-content: flex-start !important;
+    align-items: center;
+    text-align: left !important;
+    padding-left: 15px;
+    /* Ensure left padding is consistent */
+}
+
+/* Ensure Priority Filter dropdown matches button width */
+.priority-filter .dropdown-menu {
+    width: 100% !important;
+    min-width: unset !important;
+    text-align: left;
+    /* Align dropdown items to left */
+}
+
+/* Ensure selected priority text is left aligned */
+.dropdown-toggle.custom-white-button.priority-high,
+.dropdown-toggle.custom-white-button.priority-medium,
+.dropdown-toggle.custom-white-button.priority-low {
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+/* Sidebar links hover */
+.sidebar a {
+    text-decoration: none;
+    color: #212529;
+    transition: color 0.3s ease-in-out;
+}
+
+.sidebar a:hover {
+    color: #007bff;
+    text-decoration: underline;
+}
+
+/* Hover effect for collapsed sidebar buttons */
+.sidebar.collapsed .custom-white-button:hover {
+    background-color: #f0f0f0 !important;
+}
+
+/* --- Specific hover rule for Add Task button (mirrors priority button hover, but without border change) --- */
+.sidebar .custom-white-button.add-task-button:hover,
+.sidebar .custom-white-button.add-task-button:focus {
+    background-color: #e2e6ea !important;
+    color: #007bff !important;
+    /* Preserve blue text */
+}
+
+/* Hide the default caret arrow provided by react-bootstrap */
+.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Custom Dropdown Arrow for Profile */
+.custom-caret {
+    margin-left: 5px;
+    font-size: 0.7rem;
+    color: #212529;
+}
+
+/* Custom Dropdown Arrow for Priority Filter */
+.priority-caret {
+    display: none;
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: #212529;
+}
+
+/* Show the priority caret when hovering over the sidebar */
+.sidebar:hover .priority-caret {
+    display: inline-block;
+}
+
+/* Hide the default caret arrow provided by react-bootstrap */
+.dropdown-toggle::after {
+    display: none !important;
+}
+
+/* Custom Dropdown Arrow for Profile (always visible) */
+.custom-caret {
+    margin-left: 5px;
+    font-size: 0.7rem;
+    color: #212529;
+}
+
+/* Custom Dropdown Arrow for Priority Filter */
+.priority-caret {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: #212529;
+}
+
+
+/* Show the priority caret when hovering over the sidebar */
+.sidebar:hover .priority-caret {
+    display: inline-block;
+}
+
+
+/* Optionally adjust the toggle button when collapsed */
+.sidebar.collapsed .toggle-btn {
+    right: 5px;
+}
