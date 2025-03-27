@@ -1,4 +1,3 @@
-// File: src/components/Dashboard/TaskForm.js
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
@@ -6,27 +5,20 @@ import { FiTrash2 } from "react-icons/fi";
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
 import CustomReactDatetimePicker from "./CustomReactDatetimePicker"; // Updated import
+import moment from "moment";
 
-// File: src/components/Dashboard/TaskForm.js
 const formatDateForInput = (dateString) => {
   if (!dateString) return "";
-  // If already a date-only string, return it.
-  const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (dateOnlyRegex.test(dateString)) {
-    return dateString;
+  // Parse the stored due date as UTC.
+  const mUtc = moment.utc(dateString);
+  // If the UTC time is exactly midnight, treat it as a date-only value.
+  if (mUtc.hour() === 0 && mUtc.minute() === 0 && mUtc.second() === 0) {
+    return mUtc.format("YYYY-MM-DD");
   }
-  // Otherwise, convert to local ISO string.
-  const date = new Date(Date.parse(dateString));
-  const localISOTime = new Date(
-    date.getTime() - date.getTimezoneOffset() * 60000
-  ).toISOString().slice(0, 16);
-  // If the time portion is midnight ("T00:00"), return just the date.
-  if (localISOTime.endsWith("T00:00")) {
-    return localISOTime.slice(0, 10);
-  }
-  return localISOTime;
+  // Otherwise, return the full local datetime string in the format required by datetime-local inputs.
+  const mLocal = moment(dateString).local();
+  return mLocal.format("YYYY-MM-DDTHH:mm");
 };
-
 
 const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }) => {
   const [formData, setFormData] = useState({
@@ -50,15 +42,12 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       });
       if (descriptionRef.current) {
         descriptionRef.current.style.height = "auto";
-        descriptionRef.current.style.height =
-          descriptionRef.current.scrollHeight + "px";
+        descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
       }
-      const formattedExistingAttachments = (taskToEdit.attachments || []).map(
-        (filePath) => ({
-          originalPath: filePath,
-          customName: filePath.split(/[\\/]/).pop(),
-        })
-      );
+      const formattedExistingAttachments = (taskToEdit.attachments || []).map((filePath) => ({
+        originalPath: filePath,
+        customName: filePath.split(/[\\/]/).pop(),
+      }));
       setExistingAttachments(formattedExistingAttachments);
     } else {
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
@@ -69,8 +58,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
   useEffect(() => {
     if (descriptionRef.current) {
       descriptionRef.current.style.height = "auto";
-      descriptionRef.current.style.height =
-        descriptionRef.current.scrollHeight + "px";
+      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
     }
   }, [formData.description]);
 
@@ -88,17 +76,13 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
 
   const handleRenameNewFile = (index, newName) => {
     setAttachments((prev) =>
-      prev.map((file, i) =>
-        i === index ? { ...file, customName: newName } : file
-      )
+      prev.map((file, i) => (i === index ? { ...file, customName: newName } : file))
     );
   };
 
   const handleRenameExistingFile = (index, newName) => {
     setExistingAttachments((prev) =>
-      prev.map((file, i) =>
-        i === index ? { ...file, customName: newName } : file
-      )
+      prev.map((file, i) => (i === index ? { ...file, customName: newName } : file))
     );
   };
 
@@ -138,9 +122,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     data.append("priority", formData.priority);
     if (attachments.length > 0) {
       attachments.forEach((item) => {
-        const renamedFile = new File([item.file], item.customName, {
-          type: item.file.type,
-        });
+        const renamedFile = new File([item.file], item.customName, { type: item.file.type });
         data.append("attachments", renamedFile);
       });
     }
@@ -165,10 +147,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       if (closeModal) closeModal();
     } catch (error) {
       console.error("Error submitting task:", error);
-      alert(
-        error.response?.data?.message ||
-          "Task submission failed. Please try again."
-      );
+      alert(error.response?.data?.message || "Task submission failed. Please try again.");
     }
   };
 
@@ -176,13 +155,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     <Form onSubmit={handleSubmit} className="task-form">
       <Form.Group className="mb-3" controlId="formTitle">
         <Form.Label>Title</Form.Label>
-        <Form.Control
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-          required
-        />
+        <Form.Control type="text" name="title" value={formData.title} onChange={handleChange} required />
       </Form.Group>
 
       <Form.Group className="mb-3" controlId="formDescription">
@@ -217,9 +190,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
             <Form.Label>Priority</Form.Label>
             <PrioritySelect
               value={formData.priority}
-              onChange={(newPriority) =>
-                setFormData({ ...formData, priority: newPriority })
-              }
+              onChange={(newPriority) => setFormData({ ...formData, priority: newPriority })}
             />
           </Form.Group>
         </Col>
@@ -241,10 +212,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
                 onChange={(e) => handleRenameNewFile(index, e.target.value)}
                 className="form-control attachment-input"
               />
-              <span
-                className="attachment-delete-btn"
-                onClick={() => handleRemoveNewAttachment(index)}
-              >
+              <span className="attachment-delete-btn" onClick={() => handleRemoveNewAttachment(index)}>
                 <FiTrash2 size={18} />
               </span>
             </div>
@@ -263,10 +231,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
                 onChange={(e) => handleRenameExistingFile(index, e.target.value)}
                 className="form-control attachment-input"
               />
-              <span
-                className="attachment-delete-btn"
-                onClick={() => handleRemoveExistingAttachment(index)}
-              >
+              <span className="attachment-delete-btn" onClick={() => handleRemoveExistingAttachment(index)}>
                 <FiTrash2 size={18} />
               </span>
             </div>

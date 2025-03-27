@@ -67,10 +67,10 @@
   font-size: 0.8rem;
   color: #555;
   white-space: normal;
-  max-height: 48px;
+  max-height: 30px;
   line-height: 1.4;
   overflow: hidden;
-  padding-left: 24px;
+  padding-left: 27px;
   margin-bottom: 5px;
 }
 
@@ -82,7 +82,9 @@
   padding: 3px 15px;
   border-top: 1px solid #eee;
   min-height: 20px;
+  margin-top: 5px; 
   overflow: visible;
+  padding-left: 18px;
 }
 
 .task-item-footer.expanded-footer {

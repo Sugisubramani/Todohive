@@ -8,19 +8,18 @@ import moment from "moment";
 
 const formatDueDateDisplay = (dueDateString) => {
   if (!dueDateString) return "";
-
-  // Parse the string in UTC
-  const mUtc = moment.utc(dueDateString);
   
-  // If the stored time is exactly midnight in UTC, treat as date-only.
-  if (mUtc.hour() === 0 && mUtc.minute() === 0 && mUtc.second() === 0) {
-    return mUtc.format("D MMMM YYYY");
+  // If the due date string ends with a date-only pattern in UTC (e.g., T00:00:00.000Z),
+  // we assume it's a date-only value.
+  const dateOnlyRegex = /T00:00:00\.000Z$/;
+  if (dateOnlyRegex.test(dueDateString)) {
+    // Parse in UTC and format without time.
+    return moment.utc(dueDateString).format("D MMMM YYYY");
   }
   
-  // Otherwise, show both date and time (converted to local time)
-  return moment(dueDateString).format("D MMMM YYYY, h:mm A");
+  // Otherwise, parse the string normally, converting to local time.
+  return moment(dueDateString).local().format("D MMMM YYYY, h:mm A");
 };
-
 
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
@@ -58,8 +57,15 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   };
 
-  // Compute if due date has passed inline.
-  const dueDatePassed = task.dueDate ? new Date(task.dueDate) < new Date() : false;
+  // Determine if the due date is date-only.
+  const isDateOnly = task.dueDate ? /T00:00:00\.000Z$/.test(task.dueDate) : false;
+  // Compare using day-level if date-only, otherwise compare the full date/time.
+  const dueDatePassed = task.dueDate 
+    ? isDateOnly 
+      ? moment().isAfter(moment(task.dueDate), "day")
+      : moment().isAfter(moment(task.dueDate))
+    : false;
+
   const statusLabel = task.completed
     ? "Completed"
     : (!task.completed && dueDatePassed ? "Pending" : "");

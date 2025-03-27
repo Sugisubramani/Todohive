@@ -1,85 +1,547 @@
-// File: src/components/CustomReactDatetimePicker.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Button, FormControl } from 'react-bootstrap';
 import Datetime from 'react-datetime';
 import moment from 'moment';
+import { FiX, FiCheck } from 'react-icons/fi';
 import "react-datetime/css/react-datetime.css";
+import "../../styles/CustomPopupDateTimePicker.css";
 
-const CustomReactDatetimePicker = ({ selectedDate, onChange }) => {
-  const [inputValue, setInputValue] = useState('');
+const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
+  // Initialize from selectedDate prop.
+  const initialDate = selectedDate ? moment(selectedDate) : null;
+  const initialHasTime = selectedDate
+    ? (moment(selectedDate).hour() !== 0 ||
+       moment(selectedDate).minute() !== 0 ||
+       moment(selectedDate).second() !== 0)
+    : false;
 
-  // Update the displayed input when selectedDate changes
+  const [tempDate, setTempDate] = useState(initialDate);
+  const [hasTime, setHasTime] = useState(initialHasTime);
+  
+  // Controlled inputs for date and time.
+  const [dateInputValue, setDateInputValue] = useState(
+    initialDate 
+      ? (initialHasTime 
+           ? initialDate.format("MMMM D, YYYY h:mm A") 
+           : initialDate.format("MMMM D, YYYY"))
+      : "Date & Time"
+  );
+  const [timeInputValue, setTimeInputValue] = useState(
+    initialDate ? initialDate.format("h:mm A") : moment().format("h:mm A")
+  );
+  
+  // Focus tracking.
+  const [dateInputFocused, setDateInputFocused] = useState(false);
+  const [timeInputFocused, setTimeInputFocused] = useState(false);
+  // Track if user has edited the input.
+  const [isDateEdited, setIsDateEdited] = useState(false);
+  const [isTimeEdited, setIsTimeEdited] = useState(false);
+
+  const [showPopup, setShowPopup] = useState(false);
+  const [showTimePopup, setShowTimePopup] = useState(false);
+  const popupRef = useRef(null);
+  const timePopupRef = useRef(null);
+  // Refs for each time scroll column.
+  const hourColumnRef = useRef(null);
+  const minuteColumnRef = useRef(null);
+  const periodColumnRef = useRef(null);
+
+  // Helper: format display.
+  const formatDisplay = (date, withTime) => {
+    return withTime ? date.format("MMMM D, YYYY h:mm A") : date.format("MMMM D, YYYY");
+  };
+
+  // Update date input when tempDate changes.
   useEffect(() => {
-    if (selectedDate) {
-      // Check if the selectedDate is already a date-only string (e.g. "2025-03-18")
-      const dateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (dateOnlyRegex.test(selectedDate)) {
-        setInputValue(moment(selectedDate, "YYYY-MM-DD").format("MMMM D, YYYY"));
-      } else {
-        setInputValue(moment(selectedDate).format("MMMM D, YYYY h:mm A"));
+    if (tempDate && !dateInputFocused) {
+      setDateInputValue(formatDisplay(tempDate, hasTime));
+      setIsDateEdited(false);
+    } else if (!tempDate) {
+      setDateInputValue("Date & Time");
+    }
+  }, [tempDate, hasTime, dateInputFocused]);
+
+  // Update time input when tempDate changes.
+  useEffect(() => {
+    if (tempDate && !timeInputFocused) {
+      setTimeInputValue(tempDate.format("h:mm A"));
+      setIsTimeEdited(false);
+    }
+  }, [tempDate, timeInputFocused]);
+
+  // Combined click-outside handler.
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showPopup &&
+        popupRef.current &&
+        !popupRef.current.contains(event.target) &&
+        (!timePopupRef.current || !timePopupRef.current.contains(event.target))
+      ) {
+        setShowPopup(false);
+      }
+      if (showTimePopup && timePopupRef.current && !timePopupRef.current.contains(event.target)) {
+        setShowTimePopup(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showPopup, showTimePopup]);
+
+  const validDate = (current) => current.isSameOrAfter(moment(), "day");
+
+  // Date input handlers.
+  const handleDateInputChange = (e) => {
+    setDateInputValue(e.target.value);
+    setIsDateEdited(true);
+  };
+
+  const commitDateChange = () => {
+    let m = moment(dateInputValue, "MMMM D, YYYY h:mm A", true);
+    if (!m.isValid()) {
+      m = moment(dateInputValue, "MMMM D, YYYY", true);
+      if (m.isValid()) {
+        setHasTime(false);
+        m = m.hour(0).minute(0).second(0);
       }
     } else {
-      setInputValue('');
+      setHasTime(true);
     }
-  }, [selectedDate]);
-
-  const handleChange = (date) => {
-    // If the user is typing manually, simply update the input value.
-    if (typeof date === 'string') {
-      setInputValue(date);
-    } else if (moment.isMoment(date) && date.isValid()) {
-      // If the user selects a date via the calendar, check the time.
-      if (date.hour() === 0 && date.minute() === 0 && date.second() === 0) {
-        // Treat as date-only.
-        const display = date.format("MMMM D, YYYY");
-        setInputValue(display);
-        onChange(date.format("YYYY-MM-DD"));
-      } else {
-        // Date & time provided.
-        const display = date.format("MMMM D, YYYY h:mm A");
-        setInputValue(display);
-        onChange(date.toISOString());
-      }
+    if (m && m.isValid()) {
+      setTempDate(m);
+      onChange(hasTime ? m.toISOString() : m.format("YYYY-MM-DD"));
+      setIsDateEdited(false);
+    } else {
+      setDateInputValue(tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time");
     }
   };
 
-  const handleBlur = () => {
-    // On blur, try parsing the input in both formats.
-    let m = moment(inputValue, "MMMM D, YYYY h:mm A", true);
-    if (!m.isValid()) {
-      m = moment(inputValue, "MMMM D, YYYY", true);
-    }
-    if (m.isValid()) {
-      if (m.hour() === 0 && m.minute() === 0 && m.second() === 0) {
-        const display = m.format("MMMM D, YYYY");
-        setInputValue(display);
-        onChange(m.format("YYYY-MM-DD"));
-      } else {
-        const display = m.format("MMMM D, YYYY h:mm A");
-        setInputValue(display);
-        onChange(m.toISOString());
-      }
+  const handleDateInputBlur = () => {
+    setDateInputFocused(false);
+    commitDateChange();
+  };
+
+  const handleDateChange = (date) => {
+    if (moment.isMoment(date) && date.isValid() && date.isSameOrAfter(moment(), "day")) {
+      const updatedDate = date.clone().hour(0).minute(0).second(0);
+      setTempDate(updatedDate);
+      setHasTime(false);
+      setDateInputValue(updatedDate.format("MMMM D, YYYY"));
+      onChange(updatedDate.format("YYYY-MM-DD"));
     }
   };
 
-  const valid = (current) => current.isAfter(moment().subtract(1, 'day'));
+  // Time input handlers.
+  const handleTimeInputChange = (e) => {
+    setTimeInputValue(e.target.value);
+    setIsTimeEdited(true);
+  };
+
+  const commitTimeChange = () => {
+    const parsedTime = moment(timeInputValue, "h:mm A", true);
+    if (parsedTime.isValid()) {
+      const updatedDate = (tempDate || moment()).clone()
+        .hour(parsedTime.hour())
+        .minute(parsedTime.minute())
+        .second(0);
+      setTempDate(updatedDate);
+      setHasTime(true);
+      onChange(updatedDate.toISOString());
+      setIsTimeEdited(false);
+    } else {
+      setTimeInputValue(tempDate ? tempDate.format("h:mm A") : moment().format("h:mm A"));
+    }
+  };
+
+  const handleTimeInputBlur = () => {
+    setTimeInputFocused(false);
+    commitTimeChange();
+  };
+
+  // --- New logic for base time ---
+  const now = moment();
+  // If selected date is today and tempDate is in the past, use now as the base.
+  const baseTime = (tempDate && tempDate.isSame(now, "day") && tempDate.isBefore(now))
+    ? now
+    : (tempDate || now);
+
+  // Candidate functions now use baseTime.
+  const getCandidateTimeForHour = (newHour) => {
+    const currentPeriod = baseTime.hour() >= 12 ? "PM" : "AM";
+    const newHour24 = currentPeriod === "AM" ? (newHour % 12) : ((newHour % 12) + 12);
+    return moment(baseTime).hour(newHour24);
+  };
+
+  const getCandidateTimeForMinute = (newMinute) => {
+    return moment(baseTime).minute(newMinute);
+  };
+
+  const getCandidateTimeForPeriod = (newPeriod) => {
+    let currentHour12 = baseTime.hour() % 12;
+    if (currentHour12 === 0) currentHour12 = 12;
+    const newHour24 = newPeriod === "AM" ? (currentHour12 % 12) : ((currentHour12 % 12) + 12);
+    return moment(baseTime).hour(newHour24);
+  };
+
+  // Determine if selected date is today.
+  const isToday = baseTime.isSame(now, "day");
+
+  // New handlers for separate time scroll columns.
+  const handleHourSelect = (selectedHour) => {
+    const candidate = getCandidateTimeForHour(selectedHour);
+    if (isToday && candidate.isBefore(now)) return; // disable past options
+    // When user selects an hour, reset minutes to 0.
+    const updatedDate = moment(baseTime)
+    .hour(candidate.hour())
+    .minute(tempDate ? tempDate.minute() : baseTime.minute())
+    .second(0);
+      setTempDate(updatedDate);
+    setHasTime(true);
+    onChange(updatedDate.toISOString());
+  };
+
+  const handleMinuteSelect = (selectedMinute) => {
+    const candidate = getCandidateTimeForMinute(selectedMinute);
+    if (isToday && candidate.isBefore(now)) return;
+    const updatedDate = moment(baseTime).minute(selectedMinute).second(0);
+    setTempDate(updatedDate);
+    setHasTime(true);
+    onChange(updatedDate.toISOString());
+  };
+
+  const handleAmPmSelect = (selectedPeriod) => {
+    const candidate = getCandidateTimeForPeriod(selectedPeriod);
+    if (isToday && candidate.isBefore(now)) return;
+  
+    // Keep the minutes from the current tempDate (if it exists), or fall back to baseTime
+    const currentMinutes = tempDate ? tempDate.minute() : baseTime.minute();
+  
+    const updatedDate = moment(baseTime)
+      .hour(candidate.hour())
+      .minute(currentMinutes) // <-- Use the existing minutes here
+      .second(0);
+  
+    setTempDate(updatedDate);
+    setHasTime(true);
+    onChange(updatedDate.toISOString());
+  };
+  
+  // Clear the entire date and time.
+  const clearTime = () => {
+    setTempDate(null);
+    setHasTime(false);
+    onChange("");
+  };
+
+  // When opening the time section, if today and tempDate is in the past, update to now.
+  const handleTimeButtonClick = () => {
+    if (!tempDate || (isToday && tempDate.isBefore(now))) {
+      const newTime = now;
+      setTempDate(newTime);
+      setTimeInputValue(newTime.format("h:mm A"));
+    }
+    setShowTimePopup(true);
+  };
+
+  // Quick-select helper functions.
+  const handleSelectToday = () => {
+    const today = moment().startOf('day');
+    setTempDate(today);
+    setHasTime(false);
+    setDateInputValue(today.format("MMMM D, YYYY"));
+    onChange(today.format("YYYY-MM-DD"));
+  };
+
+  const handleSelectTomorrow = () => {
+    const tomorrow = moment().add(1, 'day').startOf('day');
+    setTempDate(tomorrow);
+    setHasTime(false);
+    setDateInputValue(tomorrow.format("MMMM D, YYYY"));
+    onChange(tomorrow.format("YYYY-MM-DD"));
+  };
+
+  const displayValue = tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time";
+
+  // Prepare arrays for hours, minutes, and periods.
+  const hoursArray = Array.from({ length: 12 }, (_, i) => i + 1);
+  const minutesArray = Array.from({ length: 60 }, (_, i) => i);
+  // Wrap periodsArray in useMemo to avoid dependency issues
+  const periodsArray = useMemo(() => ["AM", "PM"], []);
+
+  // Determine current selections from baseTime.
+  const currentHour12 = baseTime.hour() % 12 === 0 ? 12 : baseTime.hour() % 12;
+  const currentMinute = baseTime.minute();
+  const currentPeriod = baseTime.hour() >= 12 ? 'PM' : 'AM';
+
+  // Auto-scroll the columns when the time popup opens.
+  useEffect(() => {
+    if (showTimePopup) {
+      if (hourColumnRef.current) {
+        const index = hoursArray.indexOf(currentHour12);
+        hourColumnRef.current.scrollTop = index * 32;
+      }
+      if (minuteColumnRef.current) {
+        minuteColumnRef.current.scrollTop = currentMinute * 32;
+      }
+      if (periodColumnRef.current) {
+        const index = periodsArray.indexOf(currentPeriod);
+        periodColumnRef.current.scrollTop = index * 32;
+      }
+    }
+  }, [showTimePopup, currentHour12, currentMinute, currentPeriod, hoursArray, periodsArray]);
 
   return (
-    <div className="custom-datetime-picker">
-      <Datetime
-        value={inputValue}
-        onChange={handleChange}
-        onBlur={handleBlur}
-        isValidDate={valid}
-        dateFormat="MMMM D, YYYY"
-        timeFormat="h:mm A"
-        closeOnSelect={false}
-        inputProps={{
-          className: "form-control",
-          placeholder: "Date & Time"
-        }}
-      />
+    <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+      {/* Main Button */}
+      <Button 
+        onClick={() => setShowPopup(!showPopup)}
+        className="custom-datetime-main-button"
+        style={{ display: 'flex', alignItems: 'center', width: '230px' }}
+      >
+        <span style={{ fontSize: '1rem' }}>{displayValue}</span>
+        {tempDate && (
+          <FiX 
+            onClick={(e) => {
+              e.stopPropagation();
+              clearTime();
+            }}
+            style={{ fontSize: '0.9rem', marginLeft: 'auto' }}
+            className="custom-cross"
+          />
+        )}
+      </Button>
+
+      {/* Date Popup */}
+      {showPopup && (
+        <div 
+          ref={popupRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '-320px',
+            right: '-305px',
+            width: '135%',
+            background: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            padding: '1rem',
+            zIndex: 1000,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}
+        >
+          <div className="date-input-container" style={{ position: 'relative' }}>
+            <FormControl
+              type="text"
+              value={dateInputValue}
+              onChange={handleDateInputChange}
+              onBlur={handleDateInputBlur}
+              onFocus={() => setDateInputFocused(true)}
+              placeholder="Edit Date & Time"
+              className="custom-datetime-picker-input"
+              style={{ border: '1px solid black' }}
+            />
+            {isDateEdited && (
+              <FiCheck 
+                onClick={commitDateChange}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '1.2rem'
+                }}
+                className="custom-tick"
+              />
+            )}
+          </div>
+          {/* Fixed Quick-Select Row */}
+          <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+              <span className="quick-select-option" style={{ cursor: 'pointer', color: '#0d6efd' }} onClick={handleSelectToday}>
+                Today
+              </span>
+              <span className="quick-select-option" style={{ cursor: 'pointer', color: '#0d6efd' }} onClick={handleSelectTomorrow}>
+                Tomorrow
+              </span>
+              <span className="quick-select-option" style={{ cursor: 'pointer', color: '#6c757d' }} onClick={clearTime}>
+                No Date
+              </span>
+            </div>
+          </div>
+          <div style={{ marginTop: '1rem' }}>
+            <Datetime
+              value={tempDate || moment()}
+              onChange={handleDateChange}
+              isValidDate={validDate}
+              dateFormat="MMMM D, YYYY"
+              timeFormat={false}
+              closeOnSelect={true}
+              input={false}
+            />
+          </div>
+          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+            <Button
+              onClick={handleTimeButtonClick}
+              className="custom-datetime-time-button"
+            >
+              {hasTime ? (
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <div style={{ textAlign: 'center'}}>
+                    {tempDate.format("h:mm A")}
+                  </div>
+                  <div 
+                    onClick={(e) => { 
+                      e.stopPropagation();
+                      clearTime();
+                    }}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '8px', 
+                      top: '50%', 
+                      transform: 'translateY(-53%)'
+                    }}
+                    className="custom-cross"
+                  >
+                    <FiX />
+                  </div>
+                </div>
+              ) : (
+                "Time"
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Time Popup with Input Field and separate scroll columns */}
+      {showTimePopup && (
+        <div 
+          ref={timePopupRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            top: '-245px',
+            right: '-270px',
+            width: '100%',
+            background: '#fff',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            padding: '0.75rem',
+            zIndex: 1100,
+            maxHeight: '300px'
+          }}
+        >
+          {/* Fixed Time Input Header */}
+          <div style={{ position: 'sticky', top: 0, zIndex: 2, marginBottom: '0.5rem' }}>
+            <FormControl
+              type="text"
+              value={timeInputValue}
+              onChange={handleTimeInputChange}
+              onBlur={handleTimeInputBlur}
+              onFocus={() => setTimeInputFocused(true)}
+              placeholder="Enter time (e.g., 2:30 PM)"
+              className="time-popup-input"
+              style={{ fontSize: '0.9rem', padding: '0.375rem', width: '200px', border: '1px solid black' }}
+            />
+            {isTimeEdited && (
+              <FiCheck 
+                onClick={commitTimeChange}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  fontSize: '1.2rem'
+                }}
+                className="custom-tick"
+              />
+            )}
+          </div>
+          {/* Scrollable Columns */}
+          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+            {/* Hours Column */}
+            <div ref={hourColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '30%', borderRight: '1px solid #ccc' }}>
+              {hoursArray.map(h => {
+                const candidate = getCandidateTimeForHour(h);
+                const isDisabled = isToday && candidate.isBefore(now);
+                return (
+                  <div 
+                    key={h}
+                    onClick={() => { if (!isDisabled) handleHourSelect(h); }}
+                    style={{
+                      height: '32px',
+                      lineHeight: '32px',
+                      textAlign: 'center',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      pointerEvents: isDisabled ? 'none' : 'auto',
+                      opacity: isDisabled ? 0.5 : 1,
+                      backgroundColor: h === currentHour12 ? "#007bff" : "transparent",
+                      color: h === currentHour12 ? "#fff" : "#000",
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {h}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Minutes Column */}
+            <div ref={minuteColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '40%', borderRight: '1px solid #ccc' }}>
+              {minutesArray.map(m => {
+                const candidate = getCandidateTimeForMinute(m);
+                const isDisabled = isToday && candidate.isBefore(now);
+                return (
+                  <div 
+                    key={m}
+                    onClick={() => { if (!isDisabled) handleMinuteSelect(m); }}
+                    style={{
+                      height: '32px',
+                      lineHeight: '32px',
+                      textAlign: 'center',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      pointerEvents: isDisabled ? 'none' : 'auto',
+                      opacity: isDisabled ? 0.5 : 1,
+                      backgroundColor: m === currentMinute ? "#007bff" : "transparent",
+                      color: m === currentMinute ? "#fff" : "#000",
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {m < 10 ? `0${m}` : m}
+                  </div>
+                );
+              })}
+            </div>
+            {/* AM/PM Column */}
+            <div ref={periodColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '30%' }}>
+              {periodsArray.map(ap => {
+                const candidate = getCandidateTimeForPeriod(ap);
+                const isDisabled = isToday && candidate.isBefore(now);
+                return (
+                  <div 
+                    key={ap}
+                    onClick={() => { if (!isDisabled) handleAmPmSelect(ap); }}
+                    style={{
+                      height: '32px',
+                      lineHeight: '32px',
+                      textAlign: 'center',
+                      cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      pointerEvents: isDisabled ? 'none' : 'auto',
+                      opacity: isDisabled ? 0.5 : 1,
+                      backgroundColor: ap === currentPeriod ? "#007bff" : "transparent",
+                      color: ap === currentPeriod ? "#fff" : "#000",
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    {ap}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default CustomReactDatetimePicker;
+export default CustomPopupDateTimePicker;

@@ -1,136 +1,257 @@
-    import React, { useState } from 'react';
-    import { Dropdown, Button } from 'react-bootstrap';
-    import { FaBars, FaPlus, FaSlidersH, FaChevronDown, FaChevronRight } from 'react-icons/fa';
-    import { useNavigate } from 'react-router-dom';
-    import '../../styles/Sidebar.css';
+import React, { useState } from 'react';
+import { Dropdown, Button, Form } from 'react-bootstrap';
+import {
+  FaBars,
+  FaPlus,
+  FaSlidersH
+} from 'react-icons/fa';
+import { CgEditUnmask } from 'react-icons/cg';
+import { RiArrowDownSLine } from 'react-icons/ri';
+import { SlLogout } from 'react-icons/sl'; // Logout icon
+import { MdBuild } from 'react-icons/md'; // More icon
+import { useNavigate } from 'react-router-dom';
+import '../../styles/Sidebar.css';
 
-    const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal }) => {
-      const navigate = useNavigate();
+const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal }) => {
+  const navigate = useNavigate();
 
-      // Get user from localStorage
-      const storedUser = localStorage.getItem('user');
-      const user = storedUser ? JSON.parse(storedUser) : { name: 'User' };
-      const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+  // Get user from localStorage
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : { name: 'User' };
+  const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
 
-      // Changed initial state to "Priority" instead of "Priority Filter"
-      const [selectedFilter, setSelectedFilter] = useState("Priority");
-      // Local state to control whether the priority dropdown is open
-      const [priorityOpen, setPriorityOpen] = useState(false);
+  // Priority Filter State (multi-select)
+  const [selectedFilters, setSelectedFilters] = useState(["All"]);
+  const [priorityOpen, setPriorityOpen] = useState(false);
 
-      const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/auth/login');
-      };
+  // Status Filter State (multi-select)
+  const [selectedStatus, setSelectedStatus] = useState(["All"]);
+  const [statusOpen, setStatusOpen] = useState(false);
 
-      // Helper: return CSS class based on filter value
-      const getPriorityClass = (filter) => {
-        switch (filter) {
-          case "High": return "priority-high";
-          case "Medium": return "priority-medium";
-          case "Low": return "priority-low";
-          case "All": return "priority-all";
-          default: return "priority-default";
-        }
-      };
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/auth/login');
+  };
 
-      // Helper: return color based on filter value
-      const getPriorityColor = (filter) => {
-        switch (filter) {
-          case "High": return 'red';
-          case "Medium": return 'orange';
-          case "Low": return 'green';
-          case "All": return '#212529';
-          default: return '#212529';
-        }
-      };
+  // Priority filter toggle
+  const handleFilterToggle = (filter) => {
+    let newFilters = [...selectedFilters];
+    if (filter === "All") {
+      newFilters = ["All"];
+    } else {
+      newFilters = newFilters.filter(item => item !== "All");
+      if (newFilters.includes(filter)) {
+        newFilters = newFilters.filter(item => item !== filter);
+      } else {
+        newFilters.push(filter);
+      }
+      if (newFilters.length === 0) {
+        newFilters = ["All"];
+      }
+    }
+    setSelectedFilters(newFilters);
+    onFilterChange({ priority: newFilters, status: selectedStatus });
+  };
 
-      const handleFilterSelect = (filter) => {
-        setSelectedFilter(filter);
-        onFilterChange(filter);
-      };
+  // Status filter toggle
+  const handleStatusToggle = (stat) => {
+    let newStatus = [...selectedStatus];
+    if (stat === "All") {
+      newStatus = ["All"];
+    } else {
+      newStatus = newStatus.filter(item => item !== "All");
+      if (newStatus.includes(stat)) {
+        newStatus = newStatus.filter(item => item !== stat);
+      } else {
+        newStatus.push(stat);
+      }
+      if (newStatus.length === 0) {
+        newStatus = ["All"];
+      }
+    }
+    setSelectedStatus(newStatus);
+    onFilterChange({ priority: selectedFilters, status: newStatus });
+  };
 
-      return (
-        <div className={`sidebar bg-light ${collapsed ? 'collapsed' : ''}`}>
-          {/* Sidebar Header */}
-          <div className="sidebar-header">
-            <Button variant="light" className="toggle-btn header-item" onClick={toggleSidebar}>
-              <FaBars />
-            </Button>
-            {!collapsed && (
-              <Dropdown className="profile-dropdown header-item">
-                <Dropdown.Toggle 
-                  variant="light" 
-                  id="dropdown-profile" 
-                  className="d-flex align-items-center profile-toggle"
-                >
-                  <div className="profile-icon">{initial}</div>
-                  <span className="ms-2 sidebar-text">{user.name}</span>
-                  <FaChevronDown className="custom-caret" />
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            )}
-          </div>
+  // Display texts
+  const displayPriorityText =
+    selectedFilters[0] === "All" ? "Priority" : selectedFilters.join(', ');
+  const displayStatusText =
+    selectedStatus[0] === "All" ? "Status" : selectedStatus.join(', ');
 
-          {/* Sidebar Content */}
-          {!collapsed && (
-            <div className="sidebar-content">
-              <Button 
-                variant="light" 
-                className="custom-white-button add-task-button mb-3 w-100 no-hover" 
-                onClick={openAddTaskModal}
-              >
-                <FaPlus style={{ marginRight: '6px', fontSize: '0.9rem' }} />
-                <span style={{ fontSize: '0.9rem' }}>Add Task</span>
-              </Button>
+  // Helper to get bright text color for each status
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Pending":
+        return "#FFA500"; // Bright orange
+      case "Completed":
+        return "#28A745"; // Vibrant green
+      case "Active":
+        return "#1E90FF"; // DodgerBlue
+      default:
+        return "#212529"; // Default text color
+    }
+  };
 
-              <Dropdown 
-                className="mb-3 w-100 priority-filter"
-                onToggle={(isOpen) => setPriorityOpen(isOpen)}
-              >
-                <Dropdown.Toggle 
-                  id="priority-filter-dropdown" 
-                  key={selectedFilter}  // Forces re-mount on change
-                  className={`dropdown-toggle custom-white-button w-100 ${getPriorityClass(selectedFilter)}`}
-                  style={{
-                    fontSize: '0.9rem',
-                    padding: '0.4rem 0.8rem',
-                    color: getPriorityColor(selectedFilter),
-                    borderColor: (selectedFilter === "Priority" || selectedFilter === "All")
-                                  ? "#ced4da" 
-                                  : getPriorityColor(selectedFilter)
-                  }}
-                >
-                  <FaSlidersH style={{ marginRight: '6px', fontSize: '0.9rem' }} />
-                  <span>{selectedFilter}</span>
-                  {priorityOpen ? (
-                    <FaChevronDown className="priority-caret" />
-                  ) : (
-                    <FaChevronRight className="priority-caret" />
-                  )}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => handleFilterSelect("All")} style={{ color: '#212529', textAlign: 'left', fontSize: '0.9rem' }}>
-                    All
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => handleFilterSelect("High")} style={{ color: 'red', textAlign: 'left', fontSize: '0.9rem' }}>
-                    High
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => handleFilterSelect("Medium")} style={{ color: 'orange', textAlign: 'left', fontSize: '0.9rem' }}>
-                    Medium
-                  </Dropdown.Item>
-                  <Dropdown.Item onClick={() => handleFilterSelect("Low")} style={{ color: 'green', textAlign: 'left', fontSize: '0.9rem' }}>
-                    Low
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-            </div>
-          )}
+  return (
+    <div className={`sidebar bg-light ${collapsed ? 'collapsed' : ''}`}>
+      {/* Sidebar Header */}
+      <div className="sidebar-header">
+        <Button
+          variant="light"
+          className="toggle-btn header-item toggle-label"
+          onClick={toggleSidebar}
+        >
+          <FaBars />
+        </Button>
+        {!collapsed && (
+          <Dropdown className="profile-dropdown header-item">
+            <Dropdown.Toggle
+              variant="light"
+              id="dropdown-profile"
+              className="d-flex align-items-center profile-toggle"
+            >
+              <div className="profile-icon">{initial}</div>
+              <span className="ms-2 sidebar-text">{user.name}</span>
+              <RiArrowDownSLine className="custom-caret" />
+            </Dropdown.Toggle>
+            {/* Use a custom class on Dropdown.Menu */}
+            <Dropdown.Menu className="custom-profile-dropdown">
+              <Dropdown.Item as="button" onClick={handleLogout}>
+                <SlLogout style={{ marginRight: '8px' }} />
+                Logout
+              </Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item as="button">
+                <MdBuild style={{ marginRight: '8px' }} />
+                More
+              </Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+        )}
+      </div>
+
+      {/* Sidebar Content */}
+      {!collapsed && (
+        <div className="sidebar-content">
+          <Button
+            variant="light"
+            className="custom-white-button add-task-button mb-3 w-100 no-hover"
+            onClick={openAddTaskModal}
+          >
+            <FaPlus
+              style={{
+                marginRight: '4px',
+                fontSize: '1rem',
+                position: 'relative',
+                top: '-2px'
+              }}
+            />
+            <span style={{ fontSize: '1rem' }}>Add Task</span>
+          </Button>
+
+          {/* Priority Filter */}
+          <Dropdown
+            className="mb-3 w-100 priority-filter"
+            onToggle={(isOpen) => setPriorityOpen(isOpen)}
+            autoClose="outside"
+          >
+            <Dropdown.Toggle
+              id="priority-filter-dropdown"
+              className="dropdown-toggle custom-white-button sidebar-dropdown-control"
+            >
+              <FaSlidersH
+                style={{
+                  marginRight: '6px',
+                  fontSize: '1rem',
+                  color: 'black',
+                  position: 'relative',
+                  top: '-4px'
+                }}
+              />
+              <span className="filter-text">{displayPriorityText}</span>
+              <div className="dropdown-arrow">
+                {priorityOpen ? (
+                  <RiArrowDownSLine style={{ transform: 'rotate(0deg)', fontSize: '1.3rem' }} />
+                ) : (
+                  <RiArrowDownSLine style={{ transform: 'rotate(-90deg)', fontSize: '1.3rem' }} />
+                )}
+              </div>
+            </Dropdown.Toggle>
+            <Dropdown.Menu style={{ width: '100%' }}>
+              {["All", "High", "Medium", "Low"].map((level) => (
+                <Dropdown.Item as="div" onClick={(e) => e.stopPropagation()} key={level}>
+                  <Form.Check
+                    type="checkbox"
+                    label={level}
+                    checked={selectedFilters.includes(level)}
+                    onChange={() => handleFilterToggle(level)}
+                    style={{
+                      color:
+                        level === "High"
+                          ? 'red'
+                          : level === "Medium"
+                            ? 'orange'
+                            : level === "Low"
+                              ? 'green'
+                              : '#212529',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+
+          {/* Status Filter as Multi-Select (Checkboxes) */}
+          <Dropdown
+            className="mb-3 w-100"
+            onToggle={(isOpen) => setStatusOpen(isOpen)}
+          >
+            <Dropdown.Toggle
+              id="status-filter-dropdown"
+              className="dropdown-toggle custom-white-button sidebar-dropdown-control"
+            >
+              <CgEditUnmask
+                style={{
+                  marginRight: '6px',
+                  fontSize: '1rem',
+                  color: 'black',
+                  position: 'relative',
+                  top: '-4px'
+                }}
+              />
+              <span className="filter-text">{displayStatusText}</span>
+              <div className="dropdown-arrow">
+                {statusOpen ? (
+                  <RiArrowDownSLine style={{ transform: 'rotate(0deg)', fontSize: '1.3rem' }} />
+                ) : (
+                  <RiArrowDownSLine style={{ transform: 'rotate(-90deg)', fontSize: '1.3rem' }} />
+                )}
+              </div>
+            </Dropdown.Toggle>
+            <Dropdown.Menu style={{ width: '100%' }}>
+              {["All", "Pending", "Completed", "Active"].map((stat) => (
+                <Dropdown.Item as="div" onClick={(e) => e.stopPropagation()} key={stat}>
+                  <Form.Check
+                    type="checkbox"
+                    label={stat}
+                    checked={selectedStatus.includes(stat)}
+                    onChange={() => handleStatusToggle(stat)}
+                    style={{
+                      color: getStatusColor(stat),
+                      fontSize: '1rem',
+                    }}
+                  />
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
-      );
-    };
+      )}
+    </div>
+  );
+};
 
-    export default Sidebar;
+export default Sidebar;
