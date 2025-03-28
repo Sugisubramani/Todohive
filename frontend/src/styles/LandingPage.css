@@ -2,7 +2,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px); /* Adjust if Navbar height changes */
+  min-height: calc(100vh - 80px); 
   background-color: #f8f9fa;
   padding: 2rem;
   text-align: center;
@@ -23,15 +23,14 @@
   margin-bottom: 2rem;
 }
 
-/* Pill-shaped Get Started Button */
 .get-started {
   display: inline-flex;
   justify-content: center;
   align-items: center;
   text-transform: uppercase;
-  padding: 0.50rem 1rem; /* Adjust padding as needed for your desired size */
+  padding: 0.50rem 1rem; 
   font-weight: bold;
-  border-radius: 60px; /* Gives it that nice, curved pill shape */
+  border-radius: 60px; 
   background-color: #007bff;
   color: #fff;
   text-decoration: none;

@@ -1,4 +1,3 @@
-// client/src/components/Dashboard/TaskList.js
 import React from 'react';
 import TaskItem from './TaskItem';
 import '../../styles/TaskList.css';
@@ -13,7 +12,7 @@ const TaskList = ({ tasks, fetchTasks, openEditTaskModal, pages, page }) => {
             task={task}
             fetchTasks={fetchTasks}
             onEditTask={openEditTaskModal}
-            currentPage={page}  // pass current page to TaskItem
+            currentPage={page}  
           />
         ))}
       </div>

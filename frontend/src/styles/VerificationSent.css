@@ -1,17 +1,13 @@
-/* Icon Container Styles */
 .todoist-icon-container {
   display: flex;
   justify-content: center;
   margin-bottom: 20px;
 }
 
-/* Icon Style */
 .todoist-icon {
-  font-size: 48px; /* Adjust size as needed */
-  color: #007bff;  /* Bootstrap primary color */
+  font-size: 48px;
+  color: #007bff;
 }
-
-/* Existing styles remain unchanged */
 
 .todoist-verification-page {
   min-height: 100vh;

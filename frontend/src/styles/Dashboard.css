@@ -3,10 +3,9 @@
   height: 100vh;
   background-color: #f8f9fa;
   width: 100vw;
-  overflow: hidden; /* Prevents extra scrolling */
+  overflow: hidden; 
 }
 
-/* Main Content */
 .main-content {
   flex-grow: 1;
   display: flex;
@@ -16,7 +15,6 @@
   overflow: hidden;
 }
 
-/* Header */
 .header-area {
   text-align: center;
   margin-bottom: 0 !important;
@@ -32,26 +30,25 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px; /* Space between icon and text */
-  padding: 7px 15px; /* Smaller size */
-  font-size: 13px; /* Smaller font size */
+  gap: 1px; 
+  padding: 7px 15px; 
+  font-size: 13px; 
   font-weight: bold;
-  color: white; /* Text color */
-  background: linear-gradient(135deg, #007bff, #0056b3); /* Gradient effect */
+  color: white; 
+  background: linear-gradient(135deg, #007bff, #0056b3); 
   border: none;
-  border-radius: 25px; /* Slightly rounded */
+  border-radius: 25px;
   cursor: pointer;
-  text-decoration: none; /* No underline */
+  text-decoration: none;
   transition: all 0.3s ease;
-  position: relative; /* or absolute, if you prefer */
-  top: -10px;         /* your chosen offset */
-  z-index: 9999;      /* something big so it’s definitely on top */
+  position: relative;
+  top: -10px;      
+  z-index: 9999;      
 }
 
-/* Hover Effect: Glow and Lift */
 .main-add-task:hover {
-  background: linear-gradient(135deg, #0056b3, #004494); /* Darker gradient */
-  transform: translateY(-4px); /* Subtle lift effect */
+  background: linear-gradient(135deg, #0056b3, #004494); 
+  transform: translateY(-4px); 
 }
 
 .customize-label {
@@ -62,7 +59,7 @@
   padding: 8px;
   display: inline-block;
   transition: color 0.3s ease, filter 0.3s ease, background-color 0.3s ease;
-  color: #000000a0; /* Lighter text color (applies to icon & text) */
+  color: #000000a0; 
   font-weight: bold;
   font-size: 1rem;
 }
@@ -74,7 +71,7 @@
   border-radius: 4px;
 }
 
-/* Custom Dropdown to override Bootstrap defaults */
+
 .custom-dropdown {
   width: 270px !important;
   min-width: 270px !important;
@@ -88,7 +85,6 @@
   margin-right: -10px;
 } 
 
-/* Dropdown item styling */
 .custom-dropdown .dropdown-item {
   display: block !important;
   width: 100% !important;
@@ -99,12 +95,10 @@
   transition: background-color 0.3s ease;
 }
 
-/* Hover effect for dropdown items */
 .custom-dropdown .dropdown-item:hover {
   background-color: #f0f0f0 !important;
 }
 
-/* Divider styling */
 .custom-dropdown .dropdown-divider {
   height: 1px;
   margin: 0.5rem 0;
@@ -112,7 +106,6 @@
   border: none;
 }
 
-/* Task Card */
 .task-card {
   background: white;
   padding: 8px;
@@ -124,17 +117,15 @@
   position: relative;
   z-index: 1;
   min-height: 100px;
-  overflow: visible; /* Handles long content properly */
+  overflow: visible;
   transition: box-shadow 0.3s ease;
 }
 
-/* Hover effect for Task Card */
 .task-card:hover {
   background-color: #f8f9fa;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* Task Header */
 .task-header {
   display: flex;
   align-items: center;
@@ -147,7 +138,6 @@
   cursor: pointer;
 }
 
-/* Task Meta */
 .task-meta {
   display: flex;
   align-items: center;
@@ -161,7 +151,6 @@
   text-decoration: none;
 }
 
-/* Priority Badge */
 .task-priority {
   font-weight: bold;
   padding: 2px 6px;
@@ -169,7 +158,6 @@
   font-size: 12px;
 }
 
-/* View Button */
 .view-btn {
   align-self: flex-end;
   background-color: #007bff;
@@ -186,7 +174,6 @@
   background-color: #0056b3;
 }
 
-/* Trash Button (for task deletion) */
 .header-trash-btn {
   transition: transform 0.2s;
   cursor: pointer;
@@ -196,7 +183,6 @@
 .header-trash-btn:hover {
   transform: scale(1.05);
 }
-
 
 .search-input-container {
   position: relative;
@@ -232,7 +218,6 @@
   border-radius: 30px;
 }
 
-/* No Tasks Message */
 .no-tasks-message {
   text-align: center;
   color: #777;
@@ -240,17 +225,15 @@
   font-size: 1.2rem;
 }
 
-/* 2) Slightly pull the search bar up, but remove big bottom margin */
 .search-bar {
-  margin-top: 1px !important;  /* moves search bar up */
-  margin-bottom: 0 !important;  /* remove extra space below */
-  z-index: 1;                   /* ensure it's above backgrounds */
+  margin-top: 1px !important;  
+  margin-bottom: 0 !important;
+  z-index: 1;                   
 }
 
-/* Task List Container: shift upward and add bottom space */
 .task-list-container {
-  margin-top: 0px;   /* moves tasks up */
-  margin-bottom: 40px; /* extra space for pagination at bottom */
+  margin-top: 0px;  
+  margin-bottom: 40px; 
   position: relative;
-  z-index: 2;          /* ensures tasks appear above the search bar if needed */
+  z-index: 2;          
 }

@@ -1,4 +1,3 @@
-// server/controllers/authController.js
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -15,7 +14,6 @@ exports.signup = async (req, res) => {
     user = new User({ name, email, password, verificationToken });
     await user.save();
 
-    // Send verification email
     const verificationLink = `http://localhost:3000/verify-email?token=${verificationToken}`;
     const html = `<p>Please verify your email by clicking <a href="${verificationLink}">here</a></p>`;
     await sendEmail({ to: email, subject: 'Verify your email', html });
@@ -36,9 +34,7 @@ exports.verifyEmail = async (req, res) => {
 
   const user = await User.findOne({ verificationToken: token });
 
-  // If no user found, check if already verified (optional)
   if (!user) {
-    // Optionally, look up by email or other identifier if you store that elsewhere.
     return res.status(400).json({ message: 'Invalid or expired token' });
   }
 
@@ -76,7 +72,6 @@ exports.login = async (req, res) => {
     const payload = { user: { id: user.id, name: user.name, email: user.email } };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    // ✅ Only one response
     return res.json({
       token,
       user: { id: user.id, name: user.name, email: user.email }

@@ -1,4 +1,3 @@
-// server/models/Task.js
 const mongoose = require('mongoose');
 
 const TaskSchema = new mongoose.Schema({
@@ -7,7 +6,7 @@ const TaskSchema = new mongoose.Schema({
   description: { type: String },
   dueDate: { type: Date },
   priority: { type: String },
-  attachments: [{ type: String }], // Array of file paths
+  attachments: [{ type: String }],
   completed: { type: Boolean, default: false }
 }, { timestamps: true });
 

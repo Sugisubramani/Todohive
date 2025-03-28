@@ -4,18 +4,15 @@ import { Form, Button, Row, Col } from "react-bootstrap";
 import { FiTrash2 } from "react-icons/fi";
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
-import CustomReactDatetimePicker from "./CustomReactDatetimePicker"; // Updated import
+import CustomReactDatetimePicker from "./CustomReactDatetimePicker";
 import moment from "moment";
 
 const formatDateForInput = (dateString) => {
   if (!dateString) return "";
-  // Parse the stored due date as UTC.
   const mUtc = moment.utc(dateString);
-  // If the UTC time is exactly midnight, treat it as a date-only value.
   if (mUtc.hour() === 0 && mUtc.minute() === 0 && mUtc.second() === 0) {
     return mUtc.format("YYYY-MM-DD");
   }
-  // Otherwise, return the full local datetime string in the format required by datetime-local inputs.
   const mLocal = moment(dateString).local();
   return mLocal.format("YYYY-MM-DDTHH:mm");
 };
@@ -106,7 +103,6 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     }
   };
 
-  // Define clearForm to reset states
   const clearForm = () => {
     setFormData({ title: "", description: "", dueDate: "", priority: "" });
     setAttachments([]);

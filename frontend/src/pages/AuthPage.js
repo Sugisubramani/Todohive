@@ -1,4 +1,3 @@
-// client/src/pages/AuthPage.js
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Signup from '../components/Auth/Signup';

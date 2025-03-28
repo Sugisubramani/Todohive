@@ -1,17 +1,15 @@
-/* client/src/styles/Navbar.css */
 .custom-navbar {
-  background-color: #0056b3; /* Deep blue */
+  background-color: #0056b3; 
   padding: 1rem 2rem;
-  perspective: 1200px; /* Enable 3D context for children */
+  perspective: 1200px;
 }
 
-/* Move the brand further left */
 .custom-navbar .navbar-brand {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 1.5rem;
   text-transform: uppercase;
   color: #fff !important;
-  margin-left: -95px; /* Adjust this value to move further left */
+  margin-left: -95px; 
   transition: transform 0.3s ease;
 }
 
@@ -23,11 +21,10 @@
   transform: none;
 }
 
-/* Adjust nav links to move further right */
 .navbar-nav {
   display: flex;
   gap: 0.90rem;
-  margin-right: -100px  ; /* Adjust this value to move links further right */
+  margin-right: -100px 
 }
 
 .custom-navbar .nav-link {

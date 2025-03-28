@@ -1,4 +1,4 @@
-const mongoose = require("mongoose"); // Make sure mongoose is imported
+const mongoose = require("mongoose"); 
 const fs = require("fs");
 const path = require("path");
 const Task = require("../models/Task");
@@ -20,11 +20,8 @@ const Task = require("../models/Task");
       const { page = 1, priority, search, status } = req.query;
       const limit = 5;
       const skip = (page - 1) * limit;
-
-      // Base query with user
       const queryObj = { user: req.user.id };
 
-      // Priority Filter: handle single and multiple values
       if (priority && priority !== 'Priority') {
         if (priority.includes(',')) {
           const priorities = priority.split(',').map(p => p.trim());
@@ -34,11 +31,9 @@ const Task = require("../models/Task");
         }
       }
 
-      // Status Filter: handle multiple statuses
       if (status && status !== "All") {
         let statusArr = [];
         if (typeof status === "string") {
-          // Convert comma-separated string into an array
           statusArr = status.includes(',') ? status.split(',').map(s => s.trim()) : [status];
         } else if (Array.isArray(status)) {
           statusArr = status;
@@ -48,10 +43,8 @@ const Task = require("../models/Task");
           if (s === "Completed") {
             return { completed: true };
           } else if (s === "Active") {
-            // Active: not completed and (dueDate is null OR dueDate is in the future)
             return { completed: false, $or: [ { dueDate: null }, { dueDate: { $gte: new Date() } } ] };
           } else if (s === "Pending") {
-            // Pending: not completed and dueDate is in the past
             return { completed: false, dueDate: { $lte: new Date() } };
           }
         }).filter(Boolean);
@@ -61,7 +54,6 @@ const Task = require("../models/Task");
         }
       }
 
-      // Search Filter: use exact match first, else partial match on title
       if (search) {
         const exactRegex = new RegExp(`^${search}$`, 'i');
         const exactCount = await Task.countDocuments({ ...queryObj, title: exactRegex });
@@ -89,8 +81,6 @@ const Task = require("../models/Task");
     try {
       let task = await Task.findById(req.params.id);
       if (!task) return res.status(404).json({ message: "Task not found" });
-
-      // Parse existingAttachments if provided (for attachments that are being renamed)
       let existingAttachments = [];
       if (req.body.existingAttachments) {
         try {
@@ -102,7 +92,6 @@ const Task = require("../models/Task");
       }
 
       let renamedAttachments = [];
-      // Collect original paths from the attachments being renamed
       let originalsToRemove = [];
       for (let file of existingAttachments) {
         if (!file.originalPath || typeof file.originalPath !== "string") {
@@ -114,7 +103,6 @@ const Task = require("../models/Task");
           continue;
         }
 
-        // Build file paths
         let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
         let newPath = path.join(__dirname, "..", "uploads", file.newName);
 
@@ -125,7 +113,6 @@ const Task = require("../models/Task");
             originalsToRemove.push(file.originalPath);
           } catch (err) {
             console.error("Error renaming file:", err);
-            // In case of error, keep the original
             renamedAttachments.push(file.originalPath);
           }
         } else {
@@ -134,22 +121,18 @@ const Task = require("../models/Task");
         }
       }
 
-      // Remove the original attachments that were renamed from the existing attachments array.
       task.attachments = task.attachments.filter(
         (attachment) => !originalsToRemove.includes(attachment)
       );
 
-      // Handle new attachments (files uploaded with this request)
       const newAttachments = req.files ? req.files.map((file) => `/uploads/${file.filename}`) : [];
 
-      // Update only the provided fields
       if (req.body.title !== undefined) task.title = req.body.title;
       if (req.body.description !== undefined) task.description = req.body.description;
       if (req.body.dueDate !== undefined) task.dueDate = req.body.dueDate;
       if (req.body.priority !== undefined) task.priority = req.body.priority;
       if (req.body.completed !== undefined) task.completed = req.body.completed;
 
-      // Merge existing attachments with renamed and new attachments.
       if (renamedAttachments.length > 0 || newAttachments.length > 0) {
         task.attachments = [...new Set([...task.attachments, ...renamedAttachments, ...newAttachments])];
       }
@@ -216,13 +199,10 @@ const Task = require("../models/Task");
       }
       console.log("Clearing tasks for user:", req.user.id);
   
-      // Convert user id to ObjectId if necessary
       const userId = new mongoose.Types.ObjectId(req.user.id);
   
-      // Build the query object starting with the user filter
       const queryObj = { user: userId };
   
-      // Apply priority filter if provided and not "All"
       const { priority, status } = req.query;
       if (priority && priority !== "All") {
         if (priority.includes(",")) {
@@ -233,7 +213,6 @@ const Task = require("../models/Task");
         }
       }
   
-      // Apply status filter if provided and not "All"
       if (status && status !== "All") {
         let statusArr = [];
         if (typeof status === "string") {
@@ -246,10 +225,8 @@ const Task = require("../models/Task");
           if (s === "Completed") {
             return { completed: true };
           } else if (s === "Active") {
-            // Active: not completed and (dueDate is null OR dueDate is in the future)
             return { completed: false, $or: [{ dueDate: null }, { dueDate: { $gte: new Date() } }] };
           } else if (s === "Pending") {
-            // Pending: not completed and dueDate is in the past
             return { completed: false, dueDate: { $lte: new Date() } };
           }
         }).filter(Boolean);

@@ -1,13 +1,12 @@
-// client/src/pages/VerificationPage.js
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/VerificationPage.css'; // Import our custom CSS for animations
+import '../styles/VerificationPage.css'; 
 
 const VerificationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const hasVerifiedRef = useRef(false); // Prevent duplicate API calls
+  const hasVerifiedRef = useRef(false); 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 

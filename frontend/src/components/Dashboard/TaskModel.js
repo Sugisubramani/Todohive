@@ -1,4 +1,3 @@
-// client/src/components/Dashboard/TaskModal.js
 import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import '../../styles/TaskModal.css';

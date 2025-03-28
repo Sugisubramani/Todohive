@@ -1,4 +1,3 @@
-// client/src/components/Auth/VerificationSent.js
 import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";

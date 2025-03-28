@@ -1,4 +1,4 @@
-require('dotenv').config(); // Load environment variables first
+require('dotenv').config(); 
 
 const express = require('express');
 const cors = require('cors');
@@ -11,19 +11,16 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
-// Now you can safely use process.env
 connectDB();
 
 app.use(cors());
 app.use(express.json());
 
-// ✅ Ensure uploads folder exists
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-// ✅ Serve the uploads folder as static
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);

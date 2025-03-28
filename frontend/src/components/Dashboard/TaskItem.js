@@ -1,4 +1,3 @@
-// File: src/components/Dashboard/TaskItem.js
 import React, { useState } from "react";
 import axios from "axios";
 import { createPortal } from "react-dom";
@@ -8,16 +7,12 @@ import moment from "moment";
 
 const formatDueDateDisplay = (dueDateString) => {
   if (!dueDateString) return "";
-  
-  // If the due date string ends with a date-only pattern in UTC (e.g., T00:00:00.000Z),
-  // we assume it's a date-only value.
+
   const dateOnlyRegex = /T00:00:00\.000Z$/;
   if (dateOnlyRegex.test(dueDateString)) {
-    // Parse in UTC and format without time.
     return moment.utc(dueDateString).format("D MMMM YYYY");
   }
-  
-  // Otherwise, parse the string normally, converting to local time.
+
   return moment(dueDateString).local().format("D MMMM YYYY, h:mm A");
 };
 
@@ -57,11 +52,9 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   };
 
-  // Determine if the due date is date-only.
   const isDateOnly = task.dueDate ? /T00:00:00\.000Z$/.test(task.dueDate) : false;
-  // Compare using day-level if date-only, otherwise compare the full date/time.
-  const dueDatePassed = task.dueDate 
-    ? isDateOnly 
+  const dueDatePassed = task.dueDate
+    ? isDateOnly
       ? moment().isAfter(moment(task.dueDate), "day")
       : moment().isAfter(moment(task.dueDate))
     : false;
@@ -73,7 +66,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   return (
     <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
       <div className="card-body p-2">
-        {/* Header */}
         <div className="task-item-header">
           <input
             type="checkbox"
@@ -103,7 +95,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           </div>
         </div>
 
-        {/* Description */}
         {task.description && (
           <div className={`task-item-description ${expanded ? "expanded" : ""}`}>
             <p className="mb-0">{task.description}</p>
@@ -115,7 +106,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           </div>
         )}
 
-        {/* Footer */}
         <div className="task-item-footer">
           {task.dueDate && (
             <div className="task-due-date">

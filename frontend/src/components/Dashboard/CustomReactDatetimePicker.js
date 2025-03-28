@@ -7,7 +7,6 @@ import "react-datetime/css/react-datetime.css";
 import "../../styles/CustomPopupDateTimePicker.css";
 
 const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
-  // Initialize from selectedDate prop.
   const initialDate = selectedDate ? moment(selectedDate) : null;
   const initialHasTime = selectedDate
     ? (moment(selectedDate).hour() !== 0 ||
@@ -18,7 +17,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   const [tempDate, setTempDate] = useState(initialDate);
   const [hasTime, setHasTime] = useState(initialHasTime);
   
-  // Controlled inputs for date and time.
   const [dateInputValue, setDateInputValue] = useState(
     initialDate 
       ? (initialHasTime 
@@ -30,10 +28,8 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     initialDate ? initialDate.format("h:mm A") : moment().format("h:mm A")
   );
   
-  // Focus tracking.
   const [dateInputFocused, setDateInputFocused] = useState(false);
   const [timeInputFocused, setTimeInputFocused] = useState(false);
-  // Track if user has edited the input.
   const [isDateEdited, setIsDateEdited] = useState(false);
   const [isTimeEdited, setIsTimeEdited] = useState(false);
 
@@ -41,17 +37,14 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   const [showTimePopup, setShowTimePopup] = useState(false);
   const popupRef = useRef(null);
   const timePopupRef = useRef(null);
-  // Refs for each time scroll column.
   const hourColumnRef = useRef(null);
   const minuteColumnRef = useRef(null);
   const periodColumnRef = useRef(null);
 
-  // Helper: format display.
   const formatDisplay = (date, withTime) => {
     return withTime ? date.format("MMMM D, YYYY h:mm A") : date.format("MMMM D, YYYY");
   };
 
-  // Update date input when tempDate changes.
   useEffect(() => {
     if (tempDate && !dateInputFocused) {
       setDateInputValue(formatDisplay(tempDate, hasTime));
@@ -61,7 +54,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     }
   }, [tempDate, hasTime, dateInputFocused]);
 
-  // Update time input when tempDate changes.
   useEffect(() => {
     if (tempDate && !timeInputFocused) {
       setTimeInputValue(tempDate.format("h:mm A"));
@@ -69,7 +61,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     }
   }, [tempDate, timeInputFocused]);
 
-  // Combined click-outside handler.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -90,7 +81,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
 
   const validDate = (current) => current.isSameOrAfter(moment(), "day");
 
-  // Date input handlers.
   const handleDateInputChange = (e) => {
     setDateInputValue(e.target.value);
     setIsDateEdited(true);
@@ -131,7 +121,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     }
   };
 
-  // Time input handlers.
   const handleTimeInputChange = (e) => {
     setTimeInputValue(e.target.value);
     setIsTimeEdited(true);
@@ -158,14 +147,11 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     commitTimeChange();
   };
 
-  // --- New logic for base time ---
   const now = moment();
-  // If selected date is today and tempDate is in the past, use now as the base.
   const baseTime = (tempDate && tempDate.isSame(now, "day") && tempDate.isBefore(now))
     ? now
     : (tempDate || now);
 
-  // Candidate functions now use baseTime.
   const getCandidateTimeForHour = (newHour) => {
     const currentPeriod = baseTime.hour() >= 12 ? "PM" : "AM";
     const newHour24 = currentPeriod === "AM" ? (newHour % 12) : ((newHour % 12) + 12);
@@ -183,14 +169,11 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     return moment(baseTime).hour(newHour24);
   };
 
-  // Determine if selected date is today.
   const isToday = baseTime.isSame(now, "day");
 
-  // New handlers for separate time scroll columns.
   const handleHourSelect = (selectedHour) => {
     const candidate = getCandidateTimeForHour(selectedHour);
-    if (isToday && candidate.isBefore(now)) return; // disable past options
-    // When user selects an hour, reset minutes to 0.
+    if (isToday && candidate.isBefore(now)) return; 
     const updatedDate = moment(baseTime)
     .hour(candidate.hour())
     .minute(tempDate ? tempDate.minute() : baseTime.minute())
@@ -213,12 +196,11 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     const candidate = getCandidateTimeForPeriod(selectedPeriod);
     if (isToday && candidate.isBefore(now)) return;
   
-    // Keep the minutes from the current tempDate (if it exists), or fall back to baseTime
     const currentMinutes = tempDate ? tempDate.minute() : baseTime.minute();
   
     const updatedDate = moment(baseTime)
       .hour(candidate.hour())
-      .minute(currentMinutes) // <-- Use the existing minutes here
+      .minute(currentMinutes) 
       .second(0);
   
     setTempDate(updatedDate);
@@ -226,14 +208,12 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     onChange(updatedDate.toISOString());
   };
   
-  // Clear the entire date and time.
   const clearTime = () => {
     setTempDate(null);
     setHasTime(false);
     onChange("");
   };
 
-  // When opening the time section, if today and tempDate is in the past, update to now.
   const handleTimeButtonClick = () => {
     if (!tempDate || (isToday && tempDate.isBefore(now))) {
       const newTime = now;
@@ -243,7 +223,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     setShowTimePopup(true);
   };
 
-  // Quick-select helper functions.
   const handleSelectToday = () => {
     const today = moment().startOf('day');
     setTempDate(today);
@@ -262,18 +241,14 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
 
   const displayValue = tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time";
 
-  // Prepare arrays for hours, minutes, and periods.
   const hoursArray = Array.from({ length: 12 }, (_, i) => i + 1);
   const minutesArray = Array.from({ length: 60 }, (_, i) => i);
-  // Wrap periodsArray in useMemo to avoid dependency issues
   const periodsArray = useMemo(() => ["AM", "PM"], []);
 
-  // Determine current selections from baseTime.
   const currentHour12 = baseTime.hour() % 12 === 0 ? 12 : baseTime.hour() % 12;
   const currentMinute = baseTime.minute();
   const currentPeriod = baseTime.hour() >= 12 ? 'PM' : 'AM';
 
-  // Auto-scroll the columns when the time popup opens.
   useEffect(() => {
     if (showTimePopup) {
       if (hourColumnRef.current) {
@@ -292,7 +267,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-      {/* Main Button */}
       <Button 
         onClick={() => setShowPopup(!showPopup)}
         className="custom-datetime-main-button"
@@ -311,7 +285,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
         )}
       </Button>
 
-      {/* Date Popup */}
       {showPopup && (
         <div 
           ref={popupRef}
@@ -354,7 +327,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
               />
             )}
           </div>
-          {/* Fixed Quick-Select Row */}
           <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
             <div style={{ display: 'flex', justifyContent: 'space-around' }}>
               <span className="quick-select-option" style={{ cursor: 'pointer', color: '#0d6efd' }} onClick={handleSelectToday}>
@@ -413,7 +385,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
         </div>
       )}
 
-      {/* Time Popup with Input Field and separate scroll columns */}
       {showTimePopup && (
         <div 
           ref={timePopupRef}
@@ -431,7 +402,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
             maxHeight: '300px'
           }}
         >
-          {/* Fixed Time Input Header */}
           <div style={{ position: 'sticky', top: 0, zIndex: 2, marginBottom: '0.5rem' }}>
             <FormControl
               type="text"
@@ -457,9 +427,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
               />
             )}
           </div>
-          {/* Scrollable Columns */}
           <div style={{ display: 'flex', justifyContent: 'space-around' }}>
-            {/* Hours Column */}
             <div ref={hourColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '30%', borderRight: '1px solid #ccc' }}>
               {hoursArray.map(h => {
                 const candidate = getCandidateTimeForHour(h);
@@ -485,7 +453,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
                 );
               })}
             </div>
-            {/* Minutes Column */}
             <div ref={minuteColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '40%', borderRight: '1px solid #ccc' }}>
               {minutesArray.map(m => {
                 const candidate = getCandidateTimeForMinute(m);
@@ -511,7 +478,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
                 );
               })}
             </div>
-            {/* AM/PM Column */}
             <div ref={periodColumnRef} style={{ overflowY: 'auto', maxHeight: '200px', width: '30%' }}>
               {periodsArray.map(ap => {
                 const candidate = getCandidateTimeForPeriod(ap);

@@ -1,30 +1,23 @@
 import React, { useState } from 'react';
 import { Dropdown, Button, Form } from 'react-bootstrap';
-import {
-  FaBars,
-  FaPlus,
-  FaSlidersH
-} from 'react-icons/fa';
+import { FaBars, FaPlus, FaSlidersH } from 'react-icons/fa';
 import { CgEditUnmask } from 'react-icons/cg';
 import { RiArrowDownSLine } from 'react-icons/ri';
-import { SlLogout } from 'react-icons/sl'; // Logout icon
-import { MdBuild } from 'react-icons/md'; // More icon
+import { SlLogout } from 'react-icons/sl';
+import { MdBuild } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/Sidebar.css';
 
 const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal }) => {
   const navigate = useNavigate();
 
-  // Get user from localStorage
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : { name: 'User' };
   const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
 
-  // Priority Filter State (multi-select)
   const [selectedFilters, setSelectedFilters] = useState(["All"]);
   const [priorityOpen, setPriorityOpen] = useState(false);
 
-  // Status Filter State (multi-select)
   const [selectedStatus, setSelectedStatus] = useState(["All"]);
   const [statusOpen, setStatusOpen] = useState(false);
 
@@ -34,13 +27,12 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
     navigate('/auth/login');
   };
 
-  // Priority filter toggle
   const handleFilterToggle = (filter) => {
     let newFilters = [...selectedFilters];
     if (filter === "All") {
       newFilters = ["All"];
     } else {
-      newFilters = newFilters.filter(item => item !== "All");
+      newFilters = newFilters.filter(item => item !== "All"); 
       if (newFilters.includes(filter)) {
         newFilters = newFilters.filter(item => item !== filter);
       } else {
@@ -54,7 +46,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
     onFilterChange({ priority: newFilters, status: selectedStatus });
   };
 
-  // Status filter toggle
   const handleStatusToggle = (stat) => {
     let newStatus = [...selectedStatus];
     if (stat === "All") {
@@ -74,29 +65,26 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
     onFilterChange({ priority: selectedFilters, status: newStatus });
   };
 
-  // Display texts
   const displayPriorityText =
     selectedFilters[0] === "All" ? "Priority" : selectedFilters.join(', ');
   const displayStatusText =
     selectedStatus[0] === "All" ? "Status" : selectedStatus.join(', ');
 
-  // Helper to get bright text color for each status
   const getStatusColor = (status) => {
     switch (status) {
       case "Pending":
-        return "#FFA500"; // Bright orange
+        return "#FFA500";
       case "Completed":
-        return "#28A745"; // Vibrant green
+        return "#28A745";
       case "Active":
-        return "#1E90FF"; // DodgerBlue
+        return "#1E90FF";
       default:
-        return "#212529"; // Default text color
+        return "#212529";
     }
   };
 
   return (
     <div className={`sidebar bg-light ${collapsed ? 'collapsed' : ''}`}>
-      {/* Sidebar Header */}
       <div className="sidebar-header">
         <Button
           variant="light"
@@ -116,7 +104,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
               <span className="ms-2 sidebar-text">{user.name}</span>
               <RiArrowDownSLine className="custom-caret" />
             </Dropdown.Toggle>
-            {/* Use a custom class on Dropdown.Menu */}
             <Dropdown.Menu className="custom-profile-dropdown">
               <Dropdown.Item as="button" onClick={handleLogout}>
                 <SlLogout style={{ marginRight: '8px' }} />
@@ -132,7 +119,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
         )}
       </div>
 
-      {/* Sidebar Content */}
       {!collapsed && (
         <div className="sidebar-content">
           <Button
@@ -151,7 +137,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
             <span style={{ fontSize: '1rem' }}>Add Task</span>
           </Button>
 
-          {/* Priority Filter */}
           <Dropdown
             className="mb-3 w-100 priority-filter"
             onToggle={(isOpen) => setPriorityOpen(isOpen)}
@@ -204,7 +189,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
             </Dropdown.Menu>
           </Dropdown>
 
-          {/* Status Filter as Multi-Select (Checkboxes) */}
           <Dropdown
             className="mb-3 w-100"
             onToggle={(isOpen) => setStatusOpen(isOpen)}

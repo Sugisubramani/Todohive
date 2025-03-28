@@ -1,4 +1,3 @@
-// client/src/components/Auth/Signup.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
@@ -21,9 +20,7 @@ const Signup = () => {
     try {
       const res = await axios.post('http://localhost:5000/api/auth/signup', formData);
       console.log(res.data);
-      // Store the signup email in localStorage as a fallback
       localStorage.setItem("signupEmail", formData.email);
-      // Navigate to the verification page with the email in the query parameters
       navigate(`/auth/verification-sent?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       console.error(error);

@@ -1,4 +1,3 @@
-// PrioritySelect.js
 import React from 'react';
 import Select from 'react-select';
 
@@ -14,7 +13,6 @@ const customSelectStyles = {
     ...provided,
     height: '37.6px',
     minHeight: '37.6px',
-    // Remove any vertical padding from the control (we'll set that in valueContainer)
     padding: '0 12px',
     border: '1px solid #ced4da',
     borderRadius: '0.34rem',
@@ -28,18 +26,17 @@ const customSelectStyles = {
   }),
   valueContainer: (provided) => ({
     ...provided,
-    // Set vertical padding to 6px and horizontal to 12px
     padding: '6px 12px',
     height: '37.6px',
     display: 'flex',
-    alignItems: 'center', // Ensure text is centered vertically
+    alignItems: 'center', 
   }),
   singleValue: (provided, state) => ({
     ...provided,
     color: state.data?.color || '#212529',
     fontWeight: '400',
     fontSize: '1rem',
-    lineHeight: '24px', // Use the computed line-height
+    lineHeight: '24px', 
     fontFamily: 'inherit',
     margin: 0,
   }),

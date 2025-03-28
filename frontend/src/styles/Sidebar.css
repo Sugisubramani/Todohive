@@ -1,11 +1,9 @@
-/* Sidebar Container */
 .sidebar {
   width: 280px;
   height: 100vh;
   background-color: #f8f9fa;
   padding: 0.5rem 1rem;
-    transition: width 0.3s ease-in-out;
-  /* changed from hidden to visible */
+  transition: width 0.3s ease-in-out;
   overflow: visible;
   display: flex;
   flex-direction: column;
@@ -13,40 +11,35 @@
   box-shadow: 2px 0 5px #16171822;
 }
 
-/* Collapsed Sidebar */
 .sidebar.collapsed {
   width: 50px;
 }
 
-/* Toggle Button */
 .toggle-btn {
   position: absolute;
   top: 9px;
   right: 5px;
-  font-size: 0.4rem; /* Slightly bigger */
+  font-size: 0.4rem;
   cursor: pointer;
   border: none;
   background: transparent;
   z-index: 1000;
 }
 
-/* Default state: lil grey */
 .toggle-btn svg {
-  color: #333;  /* Change default color to grey */
+  color: #333;
 }
 
-/* On hover, change icon color to black */
 .toggle-btn:hover svg {
   color: #000000;
 }
 
-/* Sidebar Header */
 .sidebar-header {
   display: flex;
   align-items: center;
-margin-bottom: 1rem;}
+  margin-bottom: 1rem;
+}
 
-/* Profile Container */
 .profile-container {
   display: flex;
   align-items: center;
@@ -54,11 +47,10 @@ margin-bottom: 1rem;}
   margin-bottom: 1rem;
 }
 
-/* Profile Icon */
 .profile-icon {
   width: 30px;
   height: 30px;
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
   line-height: 30px;
   text-align: center;
   background: linear-gradient(135deg, #007bff, #0056b3);
@@ -66,7 +58,6 @@ margin-bottom: 1rem;}
   border-radius: 50%;
 }
 
-/* Custom Profile Dropdown Overrides */
 .custom-profile-dropdown {
   width: 250px !important;
   min-width: 260px !important;
@@ -79,7 +70,6 @@ margin-bottom: 1rem;}
   text-align: left;
 }
 
-/* Profile Dropdown Items */
 .custom-profile-dropdown .dropdown-item {
   display: block !important;
   width: 100% !important;
@@ -91,12 +81,10 @@ margin-bottom: 1rem;}
   transition: background-color 0.3s ease;
 }
 
-/* Hover effect on profile dropdown items */
 .custom-profile-dropdown .dropdown-item:hover {
   background-color: #f0f0f0 !important;
 }
 
-/* Divider style for profile dropdown */
 .custom-profile-dropdown .dropdown-divider {
   height: 1px;
   margin: 0.5rem 0;
@@ -104,7 +92,6 @@ margin-bottom: 1rem;}
   border: none;
 }
 
-/* (Optional) Adjust the position of the profile dropdown if needed */
 .profile-dropdown .dropdown-menu {
   position: absolute !important;
   top: 1px !important;
@@ -112,17 +99,14 @@ margin-bottom: 1rem;}
 }
 
 
-/* Sidebar Text (Username) */
 .sidebar-text {
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
 }
 
-/* Hide text when collapsed */
 .sidebar.collapsed .sidebar-text {
   display: none;
 }
 
-/* Sidebar Content */
 .sidebar-content {
   flex-grow: 1;
   display: flex;
@@ -133,12 +117,11 @@ margin-bottom: 1rem;}
   display: none;
 }
 
-/* Custom White Button */
 .custom-white-button {
   background-color: #fff !important;
   border: 1px solid #ced4da !important;
   color: #212529 !important;
-  font-size: 0.9rem;  /* Slightly bigger */
+  font-size: 0.9rem;
   font-weight: 400;
   padding: 0.45rem 0.85rem !important;
   border-radius: 0.25rem !important;
@@ -155,7 +138,6 @@ margin-bottom: 1rem;}
   padding-left: 15px !important;
 }
 
-/* Button Hover Effects */
 .custom-white-button:hover {
   background-color: #e2e6ea !important;
   color: #000 !important;
@@ -167,30 +149,28 @@ margin-bottom: 1rem;}
   color: #007bff !important;
 }
 
-/* Hide default dropdown caret */
 .dropdown-toggle::after {
   display: none !important;
 }
 
-/* Caret styling */
 .custom-caret,
 .priority-caret {
   margin-left: 5px;
   color: #212529;
 }
+
 .profile-toggle .custom-caret {
   font-size: 1.3rem !important;
 }
 
-/* Sidebar Dropdown Control - mimics PrioritySelect control */
 .sidebar-dropdown-control {
-  height: 35px; /* Adjusted height slightly */
+  height: 35px;
   min-height: 35px;
-  padding: 5px 10px; /* Slightly bigger padding */
+  padding: 5px 10px;
   position: relative;
   border: 1px solid #ced4da;
   border-radius: 0.34rem;
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
   font-family: inherit;
   background-color: #fff;
   display: flex;
@@ -198,42 +178,37 @@ margin-bottom: 1rem;}
   justify-content: flex-start;
 }
 
-/* Text inside the dropdown toggles (Priority/Status) */
 .filter-text {
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
   position: relative;
-  top: -3px; /* Adjust this value as needed */
+  top: -3px;
 }
 
-/* Arrow container: hidden by default, show on sidebar hover */
 .dropdown-arrow {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  display: none;  /* hidden by default */
+  display: none;
 }
 
-/* Show the arrow when hovering over the sidebar */
 .sidebar:hover .dropdown-arrow {
   display: inline-block;
 }
 
-/* Ensure dropdown menu matches control width for Priority & Status filters */
 .priority-filter .dropdown-menu,
-#status-filter-dropdown + .dropdown-menu {
+#status-filter-dropdown+.dropdown-menu {
   width: 100% !important;
   min-width: unset !important;
   text-align: left;
 }
 
-/* Sidebar links */
 .sidebar a {
   text-decoration: none;
   color: #212529;
   transition: color 0.3s ease-in-out;
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
 }
 
 .sidebar a:hover {
@@ -241,40 +216,40 @@ margin-bottom: 1rem;}
   text-decoration: underline;
 }
 
-/* Collapsed Sidebar Button Hover */
 .sidebar.collapsed .custom-white-button:hover {
   background-color: #f0f0f0 !important;
 }
 
-/* Unique styling for status dropdown checkboxes */
 .sidebar-status .form-check {
   margin: 0;
   padding: 0;
   display: flex;
   align-items: center;
 }
+
 .sidebar-status .form-check-input {
   margin-right: 5px;
 }
+
 .sidebar-status .form-check-label {
   margin: 0;
   padding: 0;
   border: none;
-  font-size: 0.9rem; /* Slightly bigger */
+  font-size: 0.9rem;
   font-family: inherit;
   line-height: 1.2;
   display: inline-flex;
   align-items: center;
 }
 
-/* Status Label Styles for Sidebar (unique) */
 .status-label.pending {
   color: #B8860B;
   background-color: rgba(184, 134, 11, 0.1);
   padding: 2px 4px;
   border-radius: 4px;
-  font-size: 0.85rem; /* Slightly smaller than main text */
+  font-size: 0.85rem;
 }
+
 .status-label.completed {
   color: #2E8B57;
   background-color: rgba(46, 139, 87, 0.1);
@@ -282,6 +257,7 @@ margin-bottom: 1rem;}
   border-radius: 4px;
   font-size: 0.85rem;
 }
+
 .status-label.active {
   color: #1E90FF;
   background-color: rgba(30, 144, 255, 0.1);
@@ -290,20 +266,17 @@ margin-bottom: 1rem;}
   font-size: 0.85rem;
 }
 
-/* Adjust form-check labels inside status dropdown items */
 .dropdown-item .form-check-label {
   margin-left: 5px !important;
   padding: 0 !important;
   border: none !important;
-  font-size: 0.9rem;  /* Slightly bigger */
+  font-size: 0.9rem;
 }
 
-/* If you want slightly larger icons, target them here */
 .sidebar svg {
   font-size: 1rem;
 }
 
-/* Increase the username size inside the profile dropdown */
 .profile-dropdown .sidebar-text {
-  font-size: 1.1rem; /* Adjust this value as needed */
+  font-size: 1.1rem;
 }

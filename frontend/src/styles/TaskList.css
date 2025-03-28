@@ -1,25 +1,24 @@
 .task-list-container {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 100px); /* Adjust based on layout */
+  min-height: calc(100vh - 100px);
   height: 100%;
   position: relative;
 }
 
 .task-items {
   flex-grow: 1;
-  overflow-y: hidden; /* Blocks unwanted scrolling */
-  padding-bottom: 80px; /* Prevents last task from being hidden */
+  overflow-y: hidden;
+  padding-bottom: 80px;
 }
 
 .pagination-controls {
-  position: absolute; /* changed from fixed */
-  bottom: 0px; /* Adjust as needed */
-  left: 50%; /* center horizontally relative to container */
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
   transform: translateX(-50%);
   background: transparent;
   padding: 5px;
   text-align: center;
   z-index: 100;
 }
-
