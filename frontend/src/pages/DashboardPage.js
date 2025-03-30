@@ -22,6 +22,15 @@ const DashboardPage = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
 
+  // Global timer state for real-time updates
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // update every 60 seconds
+    return () => clearInterval(intervalId);
+  }, []);
+
   const moreMenuRef = useRef(null);
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
@@ -217,6 +226,7 @@ const DashboardPage = () => {
               openEditTaskModal={openEditTaskModal}
               pages={pages}
               page={page}
+              currentTime={currentTime}
             />
           ) : (
             <div className="no-tasks-message">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { createPortal } from "react-dom";
 import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
@@ -20,10 +20,35 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
+  // Local timer state to force re-render every minute
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // update every 60 seconds
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleItemClick = () => {
     if (!task.completed) onEditTask(task);
   };
 
+  useEffect(() => {
+    if (!task.dueDate) return;
+    const dueTime = moment(task.dueDate).valueOf();
+    const now = Date.now();
+    const delay = dueTime - now;
+    
+    // Only set the timeout if due date is upcoming and within the next minute
+    if (delay > 0 && delay < 60000) {
+      const timeoutId = setTimeout(() => {
+        setCurrentTime(Date.now()); // trigger re-render immediately
+      }, delay);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [task.dueDate, currentTime]);
+  
   const toggleComplete = async (e) => {
     e.stopPropagation();
     try {
@@ -53,11 +78,12 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   };
 
   const isDateOnly = task.dueDate ? /T00:00:00\.000Z$/.test(task.dueDate) : false;
+
   const dueDatePassed = task.dueDate
-    ? isDateOnly
-      ? moment().isAfter(moment(task.dueDate), "day")
-      : moment().isAfter(moment(task.dueDate))
-    : false;
+  ? isDateOnly
+    ? moment().startOf("day").isAfter(moment(task.dueDate).local().startOf("day"))
+    : moment().isAfter(moment(task.dueDate).local())
+  : false;
 
   const statusLabel = task.completed
     ? "Completed"
@@ -148,15 +174,19 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
               <hr className="ti-modal-separator" />
               <ul>
                 {task.attachments.map((file, index) => {
-                  const fileName = file.split(/[\\/]/).pop();
-                  const displayName = fileName.includes("-")
-                    ? fileName.substring(fileName.indexOf("-") + 1)
-                    : fileName;
+                  let filePath, displayName;
+                  if (typeof file === "object" && file !== null) {
+                    filePath = file.path;
+                    displayName = file.displayName;
+                  } else {
+                    filePath = file;
+                    displayName = file.split(/[\\/]/).pop();
+                  }
                   return (
                     <li key={index} className="ti-small-attachment">
                       <span className="ti-bullet">&#8226;</span>
                       <a
-                        href={`http://localhost:5000/uploads/${fileName}`}
+                        href={`http://localhost:5000${filePath}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -174,6 +204,8 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           document.body
         )
       }
+      {/* Hidden element to use currentTime so that ESLint doesn't complain */}
+      <span style={{ display: "none" }}>{currentTime}</span>
     </div>
   );
 };

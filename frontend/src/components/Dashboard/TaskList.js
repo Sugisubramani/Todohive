@@ -2,7 +2,7 @@ import React from 'react';
 import TaskItem from './TaskItem';
 import '../../styles/TaskList.css';
 
-const TaskList = ({ tasks, fetchTasks, openEditTaskModal, pages, page }) => {
+const TaskList = ({ tasks, fetchTasks, openEditTaskModal, pages, page, currentTime }) => {
   return (
     <div className="task-list-container">
       <div className="task-items">
@@ -12,7 +12,8 @@ const TaskList = ({ tasks, fetchTasks, openEditTaskModal, pages, page }) => {
             task={task}
             fetchTasks={fetchTasks}
             onEditTask={openEditTaskModal}
-            currentPage={page}  
+            currentPage={page}
+            currentTime={currentTime}
           />
         ))}
       </div>

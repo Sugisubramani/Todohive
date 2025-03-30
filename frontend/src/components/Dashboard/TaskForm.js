@@ -17,6 +17,162 @@ const formatDateForInput = (dateString) => {
   return mLocal.format("YYYY-MM-DDTHH:mm");
 };
 
+const forbiddenCharsSet = new Set(['\\', '/', ':', '*', '?', '"', '<', '>', '|']);
+const forbiddenCharsRegex = /[\\/:*?"<>|]/g;
+
+const AttachmentTooltip = ({ show, message }) => {
+  if (!show) return null;
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "calc(100% + 5px)",
+        left: "30%",
+        transform: "translateX(-50%)",
+        zIndex: 1000,
+        pointerEvents: "none",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          background: "rgba(0,0,0,0.8)",
+          color: "#fff",
+          padding: "5px 10px",
+          borderRadius: "4px",
+          whiteSpace: "nowrap",
+          fontSize: "0.875rem",
+        }}
+      >
+        <div
+          style={{
+            content: '""',
+            position: "absolute",
+            top: "-5px",
+            left: "10%",
+            transform: "translateX(-50%)",
+            width: 0,
+            height: 0,
+            borderLeft: "5px solid transparent",
+            borderRight: "5px solid transparent",
+            borderBottom: "5px solid rgba(0,0,0,0.8)",
+          }}
+        />
+        {message}
+      </div>
+    </div>
+  );
+};
+
+const AttachmentInput = ({ value, onRename }) => {
+  const inputRef = useRef(null);
+  const fallbackName = useRef(value);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipText, setTooltipText] = useState("");
+
+  const triggerTooltip = (message) => {
+    setTooltipText(message);
+    setShowTooltip(true);
+    setTimeout(() => setShowTooltip(false), 1500);
+  };
+
+  const clearTooltipIfValid = (val) => {
+    if (!forbiddenCharsRegex.test(val)) {
+      setShowTooltip(false);
+    }
+  };
+
+  const allowedKeys = [
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "Tab",
+    "Shift",
+    "Control",
+    "Alt",
+    "Meta",
+  ];
+
+  const handleKeyDown = (e) => {
+    const dotIndex = value.lastIndexOf(".");
+    if (allowedKeys.includes(e.key)) return;
+
+    if (dotIndex !== -1 && e.target.selectionStart > dotIndex) {
+      e.preventDefault();
+      return;
+    }
+
+    if (e.key.length === 1 && forbiddenCharsSet.has(e.key)) {
+      e.preventDefault();
+      triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
+      return;
+    }
+
+    if (e.key === "Backspace" || e.key === "Delete") {
+      if (dotIndex === -1) return;
+      const { selectionStart, selectionEnd } = e.target;
+      if (
+        (selectionStart <= dotIndex && selectionEnd > dotIndex) ||
+        (selectionStart === selectionEnd &&
+          ((e.key === "Backspace" && selectionStart === dotIndex + 1) ||
+            (e.key === "Delete" && selectionStart === dotIndex)))
+      ) {
+        e.preventDefault();
+        triggerTooltip("You cannot delete the '.' in the extension.");
+        return;
+      }
+    }
+  };
+
+  const handlePaste = (e) => {
+    const dotIndex = value.lastIndexOf(".");
+    if (dotIndex !== -1 && e.target.selectionStart > dotIndex) {
+      e.preventDefault();
+      return;
+    }
+    const pasteData = e.clipboardData.getData("text");
+    const sanitized = pasteData.replace(forbiddenCharsRegex, "");
+    e.preventDefault();
+    const newValue = value + sanitized;
+    onRename(newValue);
+    clearTooltipIfValid(newValue);
+  };
+
+  const handleChange = (e) => {
+    let newValue = e.target.value;
+    onRename(newValue);
+    clearTooltipIfValid(newValue);
+  };
+
+  const handleBlur = (e) => {
+    let newValue = e.target.value;
+    const fallbackExt = fallbackName.current.substring(fallbackName.current.indexOf("."));
+    if (newValue.trim() === "" || newValue === fallbackExt) {
+      onRename(fallbackName.current);
+    }
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
+        onBlur={handleBlur}
+        className="form-control attachment-input"
+        style={{ width: "100%", minWidth: "467px" }}
+      />
+      <AttachmentTooltip show={showTooltip} message={tooltipText} />
+    </div>
+  );
+};
+
 const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }) => {
   const [formData, setFormData] = useState({
     title: taskToEdit ? taskToEdit.title : "",
@@ -27,7 +183,9 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
 
   const [attachments, setAttachments] = useState([]);
   const [existingAttachments, setExistingAttachments] = useState([]);
+
   const descriptionRef = useRef(null);
+  const titleInputRef = useRef(null);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -41,10 +199,19 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
         descriptionRef.current.style.height = "auto";
         descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
       }
-      const formattedExistingAttachments = (taskToEdit.attachments || []).map((filePath) => ({
-        originalPath: filePath,
-        customName: filePath.split(/[\\/]/).pop(),
-      }));
+      const formattedExistingAttachments = (taskToEdit.attachments || []).map((attachment) => {
+        if (typeof attachment === "object" && attachment !== null) {
+          return {
+            originalPath: attachment.path,
+            customName: attachment.displayName,
+          };
+        } else {
+          return {
+            originalPath: attachment,
+            customName: attachment.split(/[\\/]/).pop(),
+          };
+        }
+      });
       setExistingAttachments(formattedExistingAttachments);
     } else {
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
@@ -59,8 +226,16 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     }
   }, [formData.description]);
 
+  const handleTitleChange = (e) => {
+    setFormData((prev) => ({ ...prev, title: e.target.value }));
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === "title") {
+      handleTitleChange(e);
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value });
+    }
   };
 
   const handleFileChange = (e) => {
@@ -72,14 +247,36 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
   };
 
   const handleRenameNewFile = (index, newName) => {
+    const originalFileName = attachments[index].file.name;
+    const originalExt = originalFileName.split(".").pop();
+    let sanitized = newName.replace(forbiddenCharsRegex, "");
+    if (!sanitized.endsWith(`.${originalExt}`)) {
+      const dotIndex = sanitized.lastIndexOf(".");
+      if (dotIndex === -1) {
+        sanitized = sanitized + "." + originalExt;
+      } else {
+        sanitized = sanitized.substring(0, dotIndex) + "." + originalExt;
+      }
+    }
     setAttachments((prev) =>
-      prev.map((file, i) => (i === index ? { ...file, customName: newName } : file))
+      prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
     );
   };
 
   const handleRenameExistingFile = (index, newName) => {
+    const currentName = existingAttachments[index].customName;
+    const originalExt = currentName.split(".").pop();
+    let sanitized = newName.replace(forbiddenCharsRegex, "");
+    if (!sanitized.endsWith(`.${originalExt}`)) {
+      const dotIndex = sanitized.lastIndexOf(".");
+      if (dotIndex === -1) {
+        sanitized = sanitized + "." + originalExt;
+      } else {
+        sanitized = sanitized.substring(0, dotIndex) + "." + originalExt;
+      }
+    }
     setExistingAttachments((prev) =>
-      prev.map((file, i) => (i === index ? { ...file, customName: newName } : file))
+      prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
     );
   };
 
@@ -116,6 +313,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     data.append("description", formData.description);
     data.append("dueDate", formData.dueDate);
     data.append("priority", formData.priority);
+
     if (attachments.length > 0) {
       attachments.forEach((item) => {
         const renamedFile = new File([item.file], item.customName, { type: item.file.type });
@@ -143,107 +341,115 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       if (closeModal) closeModal();
     } catch (error) {
       console.error("Error submitting task:", error);
-      alert(error.response?.data?.message || "Task submission failed. Please try again.");
+      alert(
+        error.response?.data?.message ||
+        "Task submission failed. Please try again."
+      );
     }
   };
 
   return (
-    <Form onSubmit={handleSubmit} className="task-form">
-      <Form.Group className="mb-3" controlId="formTitle">
-        <Form.Label>Title</Form.Label>
-        <Form.Control type="text" name="title" value={formData.title} onChange={handleChange} required />
-      </Form.Group>
+    <div style={{ position: "relative" }}>
+      <Form onSubmit={handleSubmit} className="task-form">
+        <Form.Group className="mb-3" controlId="formTitle" style={{ position: "relative" }}>
+          <Form.Label>Title</Form.Label>
+          <Form.Control
+            ref={titleInputRef}
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleTitleChange}
+            required
+          />
+        </Form.Group>
 
-      <Form.Group className="mb-3" controlId="formDescription">
-        <Form.Label>Description</Form.Label>
-        <Form.Control
-          as="textarea"
-          name="description"
-          rows={1}
-          value={formData.description}
-          onChange={handleChange}
-          onInput={(e) => {
-            e.target.style.height = "auto";
-            e.target.style.height = e.target.scrollHeight + "px";
-          }}
-          ref={descriptionRef}
-          style={{ overflow: "hidden" }}
-        />
-      </Form.Group>
+        <Form.Group className="mb-3" controlId="formDescription">
+          <Form.Label>Description</Form.Label>
+          <Form.Control
+            as="textarea"
+            name="description"
+            rows={1}
+            value={formData.description}
+            onChange={handleChange}
+            onInput={(e) => {
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }}
+            ref={descriptionRef}
+            style={{ overflow: "hidden" }}
+          />
+        </Form.Group>
 
-      <Row className="mb-3">
-        <Col>
-          <Form.Group controlId="formDueDate">
-            <Form.Label>Date &amp; Time</Form.Label>
-            <CustomReactDatetimePicker
-              selectedDate={formData.dueDate}
-              onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
-            />
-          </Form.Group>
-        </Col>
-        <Col>
-          <Form.Group controlId="formPriority">
-            <Form.Label>Priority</Form.Label>
-            <PrioritySelect
-              value={formData.priority}
-              onChange={(newPriority) => setFormData({ ...formData, priority: newPriority })}
-            />
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <Form.Group className="mb-3" controlId="formAttachments">
-        <Form.Label>Attachments</Form.Label>
-        <Form.Control type="file" multiple onChange={handleFileChange} />
-      </Form.Group>
-
-      {attachments.length > 0 && (
-        <div className="mb-3">
-          <h6>New Attachments:</h6>
-          {attachments.map((item, index) => (
-            <div key={index} className="attachment-wrapper">
-              <input
-                type="text"
-                value={item.customName}
-                onChange={(e) => handleRenameNewFile(index, e.target.value)}
-                className="form-control attachment-input"
+        <Row className="mb-3">
+          <Col>
+            <Form.Group controlId="formDueDate">
+              <Form.Label>Date &amp; Time</Form.Label>
+              <CustomReactDatetimePicker
+                selectedDate={formData.dueDate}
+                onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
               />
-              <span className="attachment-delete-btn" onClick={() => handleRemoveNewAttachment(index)}>
-                <FiTrash2 size={18} />
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {existingAttachments.length > 0 && (
-        <div className="mb-3">
-          <h6>Existing Attachments:</h6>
-          {existingAttachments.map((item, index) => (
-            <div key={index} className="attachment-wrapper">
-              <input
-                type="text"
-                value={item.customName}
-                onChange={(e) => handleRenameExistingFile(index, e.target.value)}
-                className="form-control attachment-input"
+            </Form.Group>
+          </Col>
+          <Col>
+            <Form.Group controlId="formPriority">
+              <Form.Label>Priority</Form.Label>
+              <PrioritySelect
+                value={formData.priority}
+                onChange={(newPriority) => setFormData({ ...formData, priority: newPriority })}
               />
-              <span className="attachment-delete-btn" onClick={() => handleRemoveExistingAttachment(index)}>
-                <FiTrash2 size={18} />
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+            </Form.Group>
+          </Col>
+        </Row>
 
-      <div className="button-group">
-        <Button variant="secondary" onClick={closeModal}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="outline-primary">
-          {taskToEdit ? "Save" : "Add Task"}
-        </Button>
-      </div>
-    </Form>
+        <Form.Group className="mb-3" controlId="formAttachments">
+          <Form.Label>Attachments</Form.Label>
+          <Form.Control type="file" multiple onChange={handleFileChange} />
+        </Form.Group>
+
+        {attachments.length > 0 && (
+          <div className="mb-3">
+            <h6>New Attachments:</h6>
+            {attachments.map((item, index) => (
+              <div key={index} className="attachment-wrapper">
+                <AttachmentInput
+                  value={item.customName}
+                  onRename={(newVal) => handleRenameNewFile(index, newVal)}
+                />
+                <span className="attachment-delete-btn" onClick={() => handleRemoveNewAttachment(index)}>
+                  <FiTrash2 size={18} />
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {existingAttachments.length > 0 && (
+          <div className="mb-3">
+            <h6>Existing Attachments:</h6>
+            {existingAttachments.map((item, index) => (
+              <div key={index} className="attachment-wrapper">
+                <AttachmentInput
+                  value={item.customName}
+                  onRename={(newVal) => handleRenameExistingFile(index, newVal)}
+                />
+                <span className="attachment-delete-btn" onClick={() => handleRemoveExistingAttachment(index)}>
+                  <FiTrash2 size={18} />
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="button-group">
+          <Button variant="secondary" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="outline-primary">
+            Submit
+          </Button>
+        </div>
+      </Form>
+    </div>
   );
 };
 

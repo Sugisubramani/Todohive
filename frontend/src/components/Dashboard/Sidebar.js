@@ -134,7 +134,7 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
                 top: '-2px'
               }}
             />
-            <span style={{ fontSize: '1rem' }}>Add Task</span>
+            <span style={{ fontSize: '0.9rem' }}>Add Task</span>
           </Button>
 
           <Dropdown

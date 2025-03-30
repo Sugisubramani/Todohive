@@ -7,12 +7,9 @@ import "react-datetime/css/react-datetime.css";
 import "../../styles/CustomPopupDateTimePicker.css";
 
 const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
+  // Use a regex on the raw selectedDate string so that even "12:00 AM" is detected.
+  const initialHasTime = selectedDate ? /[0-9]{1,2}:[0-9]{2}/.test(selectedDate.toString()) : false;
   const initialDate = selectedDate ? moment(selectedDate) : null;
-  const initialHasTime = selectedDate
-    ? (moment(selectedDate).hour() !== 0 ||
-       moment(selectedDate).minute() !== 0 ||
-       moment(selectedDate).second() !== 0)
-    : false;
 
   const [tempDate, setTempDate] = useState(initialDate);
   const [hasTime, setHasTime] = useState(initialHasTime);
@@ -86,20 +83,41 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     setIsDateEdited(true);
   };
 
+  // If the user clears the field entirely, clear the date.
   const commitDateChange = () => {
-    let m = moment(dateInputValue, "MMMM D, YYYY h:mm A", true);
+    if (dateInputValue.trim() === "") {
+      clearDate();
+      return;
+    }
+    // Try multiple date+time formats.
+    let m = moment(
+      dateInputValue,
+      [
+        "MMMM D, YYYY h:mm A",
+        "MMMM D, YYYY h:mmA",
+        "MMM D, YYYY h:mm A",
+        "MMM D, YYYY h:mmA"
+      ],
+      true
+    );
+    let _hasTime = false;
     if (!m.isValid()) {
-      m = moment(dateInputValue, "MMMM D, YYYY", true);
+      m = moment(
+        dateInputValue,
+        ["MMMM D, YYYY", "MMM D, YYYY"],
+        true
+      );
       if (m.isValid()) {
-        setHasTime(false);
+        _hasTime = false;
         m = m.hour(0).minute(0).second(0);
       }
     } else {
-      setHasTime(true);
+      _hasTime = true;
     }
     if (m && m.isValid()) {
       setTempDate(m);
-      onChange(hasTime ? m.toISOString() : m.format("YYYY-MM-DD"));
+      setHasTime(_hasTime);
+      onChange(_hasTime ? m.toISOString() : m.format("YYYY-MM-DD"));
       setIsDateEdited(false);
     } else {
       setDateInputValue(tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time");
@@ -126,7 +144,18 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     setIsTimeEdited(true);
   };
 
+  // If time input is empty, clear only the time while preserving the date.
   const commitTimeChange = () => {
+    if (timeInputValue.trim() === "") {
+      if (tempDate) {
+        const updatedDate = tempDate.clone().hour(0).minute(0).second(0);
+        setTempDate(updatedDate);
+        setHasTime(false);
+        onChange(updatedDate.format("YYYY-MM-DD"));
+      }
+      setIsTimeEdited(false);
+      return;
+    }
     const parsedTime = moment(timeInputValue, "h:mm A", true);
     if (parsedTime.isValid()) {
       const updatedDate = (tempDate || moment()).clone()
@@ -158,10 +187,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     return moment(baseTime).hour(newHour24);
   };
 
-  const getCandidateTimeForMinute = (newMinute) => {
-    return moment(baseTime).minute(newMinute);
-  };
-
+  const getCandidateTimeForMinute = (newMinute) => moment(baseTime).minute(newMinute);
   const getCandidateTimeForPeriod = (newPeriod) => {
     let currentHour12 = baseTime.hour() % 12;
     if (currentHour12 === 0) currentHour12 = 12;
@@ -175,10 +201,10 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     const candidate = getCandidateTimeForHour(selectedHour);
     if (isToday && candidate.isBefore(now)) return; 
     const updatedDate = moment(baseTime)
-    .hour(candidate.hour())
-    .minute(tempDate ? tempDate.minute() : baseTime.minute())
-    .second(0);
-      setTempDate(updatedDate);
+      .hour(candidate.hour())
+      .minute(tempDate ? tempDate.minute() : baseTime.minute())
+      .second(0);
+    setTempDate(updatedDate);
     setHasTime(true);
     onChange(updatedDate.toISOString());
   };
@@ -195,23 +221,34 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   const handleAmPmSelect = (selectedPeriod) => {
     const candidate = getCandidateTimeForPeriod(selectedPeriod);
     if (isToday && candidate.isBefore(now)) return;
-  
     const currentMinutes = tempDate ? tempDate.minute() : baseTime.minute();
-  
     const updatedDate = moment(baseTime)
       .hour(candidate.hour())
-      .minute(currentMinutes) 
+      .minute(currentMinutes)
       .second(0);
-  
     setTempDate(updatedDate);
     setHasTime(true);
     onChange(updatedDate.toISOString());
   };
-  
-  const clearTime = () => {
+
+  // Date cross icon clears the entire value.
+  const clearDate = () => {
     setTempDate(null);
     setHasTime(false);
     onChange("");
+    setDateInputValue("");
+    setTimeInputValue("");
+  };
+
+  // Time cross icon clears only the time portion.
+  const clearTime = () => {
+    if (tempDate) {
+      const updatedDate = tempDate.clone().hour(0).minute(0).second(0);
+      setTempDate(updatedDate);
+      setHasTime(false);
+      onChange(updatedDate.format("YYYY-MM-DD"));
+    }
+    setTimeInputValue("");
   };
 
   const handleTimeButtonClick = () => {
@@ -277,7 +314,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
           <FiX 
             onClick={(e) => {
               e.stopPropagation();
-              clearTime();
+              clearDate();
             }}
             style={{ fontSize: '0.9rem', marginLeft: 'auto' }}
             className="custom-cross"
@@ -335,7 +372,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
               <span className="quick-select-option" style={{ cursor: 'pointer', color: '#0d6efd' }} onClick={handleSelectTomorrow}>
                 Tomorrow
               </span>
-              <span className="quick-select-option" style={{ cursor: 'pointer', color: '#6c757d' }} onClick={clearTime}>
+              <span className="quick-select-option" style={{ cursor: 'pointer', color: '#6c757d' }} onClick={clearDate}>
                 No Date
               </span>
             </div>
