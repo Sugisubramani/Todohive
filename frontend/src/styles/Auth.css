@@ -38,16 +38,14 @@
   border-radius: 4px;
 }
 
-/* Password field container to position the toggle inside the input */
 .password-input-container {
   position: relative;
 }
 
 .password-input-container input {
-  padding-right: 40px; /* Extra padding for the icon */
+  padding-right: 40px; 
 }
 
-/* Style the toggle button so it appears inside the input */
 .toggle-password {
   position: absolute;
   right: 10px;
@@ -56,14 +54,13 @@
   background: transparent;
   border: none;
   cursor: pointer;
-  color: #6c757d; /* Neutral color */
+  color: #6c757d; 
 }
 
 .toggle-password:focus {
   outline: none;
 }
 
-/* Optional: Adjust the size of the react icon */
 .toggle-icon {
   font-size: 1.2rem;
 }
