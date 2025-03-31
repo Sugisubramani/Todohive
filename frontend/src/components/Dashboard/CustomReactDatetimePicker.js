@@ -7,7 +7,6 @@ import "react-datetime/css/react-datetime.css";
 import "../../styles/CustomPopupDateTimePicker.css";
 
 const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
-  // If isDateOnly is true, force hasTime to false.
   const initialHasTime = isDateOnly 
     ? false 
     : (selectedDate ? /[0-9]{1,2}:[0-9]{2}/.test(selectedDate.toString()) : false);
@@ -80,7 +79,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPopup, showTimePopup]);
 
-  // Updated validDate: use startOf("day") so today is allowed
   const validDate = (current) => current.isSameOrAfter(moment().startOf("day"));
 
   const handleDateInputChange = (e) => {
@@ -88,7 +86,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
     setIsDateEdited(true);
   };
 
-  // If the user clears the field entirely, clear the date.
   const clearDate = () => {
     setTempDate(null);
     setHasTime(false);
@@ -97,14 +94,12 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
     setTimeInputValue("");
   };
 
-  // ****************** Begin Updated commitDateChange ******************
   const commitDateChange = () => {
     if (dateInputValue.trim() === "") {
       clearDate();
       return;
     }
     if (isDateOnly) {
-      // For date-only tasks, try parsing only date formats.
       let m = moment(dateInputValue, ["MMMM D, YYYY", "MMM D, YYYY"], true);
       if (m.isValid()) {
         m = m.startOf("day");
@@ -117,7 +112,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
       }
       return;
     }
-    // Existing logic for date + time
     let m = moment(
       dateInputValue,
       [
@@ -151,7 +145,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
       setDateInputValue(tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time");
     }
   };
-  // ****************** End Updated commitDateChange ******************
 
   const handleDateInputBlur = () => {
     setDateInputFocused(false);
@@ -217,7 +210,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
     ? now
     : (tempDate || now);
 
-  // (Time selection functions unchanged)
   const getCandidateTimeForHour = (newHour) => {
     const currentPeriod = baseTime.hour() >= 12 ? "PM" : "AM";
     const newHour24 = currentPeriod === "AM" ? (newHour % 12) : ((newHour % 12) + 12);
@@ -268,8 +260,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
     onChange(updatedDate.toISOString());
   };
 
-  // Date cross icon clears the entire value.
-  // Time cross icon clears only the time portion.
   const clearTime = () => {
     if (tempDate) {
       const updatedDate = tempDate.clone().hour(0).minute(0).second(0);
@@ -417,7 +407,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
               input={false}
             />
           </div>
-          {/* Conditionally render the time popup only if not date-only */}
           {!isDateOnly && (
             <div style={{ marginTop: '1rem', textAlign: 'center' }}>
               <Button
