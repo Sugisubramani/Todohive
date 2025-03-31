@@ -22,12 +22,11 @@ const DashboardPage = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
 
-  // Global timer state for real-time updates
   const [currentTime, setCurrentTime] = useState(Date.now());
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 60000); // update every 60 seconds
+    }, 60000); 
     return () => clearInterval(intervalId);
   }, []);
 
