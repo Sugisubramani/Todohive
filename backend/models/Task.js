@@ -5,7 +5,7 @@ const TaskSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
   dueDate: { type: Date },
-  localDueDate: { type: String }, // NEW: stores the date portion (YYYY-MM-DD) in local time
+  localDueDate: { type: String },
   priority: { type: String },
   isDateOnly: { type: Boolean, default: false },
   attachments: [
