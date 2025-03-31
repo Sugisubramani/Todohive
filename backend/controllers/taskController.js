@@ -4,7 +4,6 @@ const path = require("path");
 const Task = require("../models/Task");
 const moment = require("moment");
 
-// Helper to return the current local date string (YYYY-MM-DD)
 function getCurrentLocalDateString() {
   return moment().format("YYYY-MM-DD");
 }
@@ -13,25 +12,20 @@ exports.createTask = async (req, res) => {
   try {
     const { title, description, dueDate, priority } = req.body;
 
-    // Normalize dueDate if provided
     let finalDueDate = null;
     let isDateOnly = false;
     let localDueDate = null;
     if (dueDate) {
-      // Try parsing as a date-only string in local time using moment
       const mDueDate = moment(dueDate, "YYYY-MM-DD", true);
       if (mDueDate.isValid()) {
-        // It's a date-only input
         isDateOnly = true;
         localDueDate = mDueDate.format("YYYY-MM-DD");
-        finalDueDate = mDueDate.endOf("day").toDate(); // set to 23:59:59.999 local time
+        finalDueDate = mDueDate.endOf("day").toDate(); 
       } else {
-        // Fallback for datetime values
         finalDueDate = new Date(dueDate);
       }
     }
 
-    // Store attachments
     const attachments = req.files
       ? req.files.map((file) => ({
           path: `/uploads/${file.filename}`,
@@ -44,7 +38,7 @@ exports.createTask = async (req, res) => {
       title,
       description,
       dueDate: finalDueDate,
-      localDueDate, // stores the local date string for date-only tasks
+      localDueDate, 
       priority,
       attachments,
       isDateOnly,
@@ -65,7 +59,6 @@ exports.getTasks = async (req, res) => {
     const skip = (page - 1) * limit;
     const queryObj = { user: req.user.id };
 
-    // Filter by priority
     if (priority && priority !== "Priority") {
       if (priority.includes(",")) {
         const priorities = priority.split(",").map((p) => p.trim());
@@ -75,7 +68,6 @@ exports.getTasks = async (req, res) => {
       }
     }
 
-    // Status filtering using localDueDate for date-only tasks
     if (status && status !== "All") {
       let statusArr = [];
       if (typeof status === "string") {
@@ -96,9 +88,7 @@ exports.getTasks = async (req, res) => {
             completed: false,
             $or: [
               { dueDate: null },
-              // For time-specific tasks: active if dueDate > now
               { isDateOnly: false, dueDate: { $gt: now } },
-              // For date-only tasks: active if localDueDate is today or later
               { isDateOnly: true, localDueDate: { $gte: currentLocalDate } }
             ]
           };
@@ -106,9 +96,7 @@ exports.getTasks = async (req, res) => {
           return {
             completed: false,
             $or: [
-              // For time-specific tasks: pending if dueDate <= now
               { isDateOnly: false, dueDate: { $lte: now } },
-              // For date-only tasks: pending if localDueDate is before today
               { isDateOnly: true, localDueDate: { $lt: currentLocalDate } }
             ]
           };
@@ -147,7 +135,6 @@ exports.updateTask = async (req, res) => {
     let task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // Convert existing attachments to objects
     task.attachments = task.attachments.map((att) => {
       if (typeof att === "string") {
         return { path: att, displayName: path.basename(att) };
@@ -155,7 +142,6 @@ exports.updateTask = async (req, res) => {
       return att;
     });
 
-    // Parse existingAttachments for renaming
     let existingAttachments = [];
     if (req.body.existingAttachments) {
       try {
@@ -210,14 +196,12 @@ exports.updateTask = async (req, res) => {
         }))
       : [];
 
-    // Update basic fields
     if (req.body.title !== undefined) task.title = req.body.title;
     if (req.body.description !== undefined) task.description = req.body.description;
     if (req.body.dueDate !== undefined) {
       let updatedDate = null;
       let updatedIsDateOnly = false;
       let updatedLocalDueDate = null;
-      // Use moment to check if dueDate is in YYYY-MM-DD format
       const mDueDate = moment(req.body.dueDate, "YYYY-MM-DD", true);
       if (mDueDate.isValid()) {
         updatedIsDateOnly = true;
