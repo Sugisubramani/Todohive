@@ -197,7 +197,6 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
           : "",
         priority: taskToEdit.priority,
       });
-      // ... (existing attachments handling)
     } else {
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
       setExistingAttachments([]);
@@ -373,7 +372,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
               <CustomReactDatetimePicker
                 selectedDate={formData.dueDate}
                 onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
-                isDateOnly={taskToEdit && taskToEdit.isDateOnly}  // Pass the flag here
+                isDateOnly={taskToEdit && taskToEdit.isDateOnly}  
               />
 
             </Form.Group>
