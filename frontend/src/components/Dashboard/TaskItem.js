@@ -9,11 +9,9 @@ const formatDueDateDisplay = (task) => {
   if (!task.dueDate) return "";
 
   if (task.isDateOnly && task.localDueDate) {
-    // Use the date-only value stored in localDueDate
     return moment(task.localDueDate, "YYYY-MM-DD").format("D MMMM YYYY");
   }
 
-  // Otherwise, display the full dueDate with time
   return moment(task.dueDate).local().format("D MMMM YYYY, h:mm A");
 };
 
@@ -22,12 +20,11 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
 
-  // Local timer state to force re-render every minute
   const [currentTime, setCurrentTime] = useState(Date.now());
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 60000); // update every 60 seconds
+    }, 60000); 
 
     return () => clearInterval(intervalId);
   }, []);
@@ -42,10 +39,9 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     const now = Date.now();
     const delay = dueTime - now;
     
-    // Only set the timeout if due date is upcoming and within the next minute
     if (delay > 0 && delay < 60000) {
       const timeoutId = setTimeout(() => {
-        setCurrentTime(Date.now()); // trigger re-render immediately
+        setCurrentTime(Date.now()); 
       }, delay);
       return () => clearTimeout(timeoutId);
     }
@@ -207,7 +203,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           document.body
         )
       }
-      {/* Hidden element to use currentTime so that ESLint doesn't complain */}
       <span style={{ display: "none" }}>{currentTime}</span>
     </div>
   );
