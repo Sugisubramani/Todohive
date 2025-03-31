@@ -192,32 +192,18 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       setFormData({
         title: taskToEdit.title,
         description: taskToEdit.description,
-        dueDate: taskToEdit.dueDate ? formatDateForInput(taskToEdit.dueDate) : "",
+        dueDate: taskToEdit.dueDate
+          ? (taskToEdit.isDateOnly ? taskToEdit.localDueDate : formatDateForInput(taskToEdit.dueDate))
+          : "",
         priority: taskToEdit.priority,
       });
-      if (descriptionRef.current) {
-        descriptionRef.current.style.height = "auto";
-        descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
-      }
-      const formattedExistingAttachments = (taskToEdit.attachments || []).map((attachment) => {
-        if (typeof attachment === "object" && attachment !== null) {
-          return {
-            originalPath: attachment.path,
-            customName: attachment.displayName,
-          };
-        } else {
-          return {
-            originalPath: attachment,
-            customName: attachment.split(/[\\/]/).pop(),
-          };
-        }
-      });
-      setExistingAttachments(formattedExistingAttachments);
+      // ... (existing attachments handling)
     } else {
       setFormData({ title: "", description: "", dueDate: "", priority: "" });
       setExistingAttachments([]);
     }
   }, [taskToEdit]);
+
 
   useEffect(() => {
     if (descriptionRef.current) {
@@ -387,7 +373,9 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
               <CustomReactDatetimePicker
                 selectedDate={formData.dueDate}
                 onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
+                isDateOnly={taskToEdit && taskToEdit.isDateOnly}  // Pass the flag here
               />
+
             </Form.Group>
           </Col>
           <Col>

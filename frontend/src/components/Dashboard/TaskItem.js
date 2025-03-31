@@ -5,16 +5,18 @@ import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
 import "../../styles/TaskItem.css";
 import moment from "moment";
 
-const formatDueDateDisplay = (dueDateString) => {
-  if (!dueDateString) return "";
+const formatDueDateDisplay = (task) => {
+  if (!task.dueDate) return "";
 
-  const dateOnlyRegex = /T00:00:00\.000Z$/;
-  if (dateOnlyRegex.test(dueDateString)) {
-    return moment.utc(dueDateString).format("D MMMM YYYY");
+  if (task.isDateOnly && task.localDueDate) {
+    // Use the date-only value stored in localDueDate
+    return moment(task.localDueDate, "YYYY-MM-DD").format("D MMMM YYYY");
   }
 
-  return moment(dueDateString).local().format("D MMMM YYYY, h:mm A");
+  // Otherwise, display the full dueDate with time
+  return moment(task.dueDate).local().format("D MMMM YYYY, h:mm A");
 };
+
 
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
@@ -135,9 +137,10 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
         <div className="task-item-footer">
           {task.dueDate && (
             <div className="task-due-date">
-              <FaRegCalendarAlt className="icon-date" />
-              <small>{formatDueDateDisplay(task.dueDate)}</small>
-            </div>
+            <FaRegCalendarAlt className="icon-date" />
+            <small>{formatDueDateDisplay(task)}</small>
+          </div>
+          
           )}
           {task.priority && (
             <div className={`task-priority ${task.priority.toLowerCase()}`}>

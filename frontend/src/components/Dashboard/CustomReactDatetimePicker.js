@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Button, FormControl } from 'react-bootstrap';
 import Datetime from 'react-datetime';
 import moment from 'moment';
@@ -6,9 +6,11 @@ import { FiX, FiCheck } from 'react-icons/fi';
 import "react-datetime/css/react-datetime.css";
 import "../../styles/CustomPopupDateTimePicker.css";
 
-const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
-  // Use a regex on the raw selectedDate string so that even "12:00 AM" is detected.
-  const initialHasTime = selectedDate ? /[0-9]{1,2}:[0-9]{2}/.test(selectedDate.toString()) : false;
+const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
+  // If isDateOnly is true, force hasTime to false.
+  const initialHasTime = isDateOnly 
+    ? false 
+    : (selectedDate ? /[0-9]{1,2}:[0-9]{2}/.test(selectedDate.toString()) : false);
   const initialDate = selectedDate ? moment(selectedDate) : null;
 
   const [tempDate, setTempDate] = useState(initialDate);
@@ -16,9 +18,11 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   
   const [dateInputValue, setDateInputValue] = useState(
     initialDate 
-      ? (initialHasTime 
-           ? initialDate.format("MMMM D, YYYY h:mm A") 
-           : initialDate.format("MMMM D, YYYY"))
+      ? (isDateOnly 
+           ? initialDate.format("MMMM D, YYYY") 
+           : (initialHasTime 
+                ? initialDate.format("MMMM D, YYYY h:mm A") 
+                : initialDate.format("MMMM D, YYYY")))
       : "Date & Time"
   );
   const [timeInputValue, setTimeInputValue] = useState(
@@ -76,7 +80,8 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPopup, showTimePopup]);
 
-  const validDate = (current) => current.isSameOrAfter(moment(), "day");
+  // Updated validDate: use startOf("day") so today is allowed
+  const validDate = (current) => current.isSameOrAfter(moment().startOf("day"));
 
   const handleDateInputChange = (e) => {
     setDateInputValue(e.target.value);
@@ -84,12 +89,35 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   };
 
   // If the user clears the field entirely, clear the date.
+  const clearDate = () => {
+    setTempDate(null);
+    setHasTime(false);
+    onChange("");
+    setDateInputValue("");
+    setTimeInputValue("");
+  };
+
+  // ****************** Begin Updated commitDateChange ******************
   const commitDateChange = () => {
     if (dateInputValue.trim() === "") {
       clearDate();
       return;
     }
-    // Try multiple date+time formats.
+    if (isDateOnly) {
+      // For date-only tasks, try parsing only date formats.
+      let m = moment(dateInputValue, ["MMMM D, YYYY", "MMM D, YYYY"], true);
+      if (m.isValid()) {
+        m = m.startOf("day");
+        setTempDate(m);
+        setHasTime(false);
+        onChange(m.format("YYYY-MM-DD"));
+        setIsDateEdited(false);
+      } else {
+        setDateInputValue(tempDate ? formatDisplay(tempDate, false) : "Date & Time");
+      }
+      return;
+    }
+    // Existing logic for date + time
     let m = moment(
       dateInputValue,
       [
@@ -123,6 +151,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
       setDateInputValue(tempDate ? formatDisplay(tempDate, hasTime) : "Date & Time");
     }
   };
+  // ****************** End Updated commitDateChange ******************
 
   const handleDateInputBlur = () => {
     setDateInputFocused(false);
@@ -131,11 +160,19 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
 
   const handleDateChange = (date) => {
     if (moment.isMoment(date) && date.isValid() && date.isSameOrAfter(moment(), "day")) {
-      const updatedDate = date.clone().hour(0).minute(0).second(0);
-      setTempDate(updatedDate);
-      setHasTime(false);
-      setDateInputValue(updatedDate.format("MMMM D, YYYY"));
-      onChange(updatedDate.format("YYYY-MM-DD"));
+      if (isDateOnly) {
+        const updatedDate = date.clone().startOf("day");
+        setTempDate(updatedDate);
+        setHasTime(false);
+        setDateInputValue(updatedDate.format("MMMM D, YYYY"));
+        onChange(updatedDate.format("YYYY-MM-DD"));
+      } else {
+        const updatedDate = date.clone().hour(0).minute(0).second(0);
+        setTempDate(updatedDate);
+        setHasTime(false);
+        setDateInputValue(updatedDate.format("MMMM D, YYYY"));
+        onChange(updatedDate.format("YYYY-MM-DD"));
+      }
     }
   };
 
@@ -144,7 +181,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     setIsTimeEdited(true);
   };
 
-  // If time input is empty, clear only the time while preserving the date.
   const commitTimeChange = () => {
     if (timeInputValue.trim() === "") {
       if (tempDate) {
@@ -181,6 +217,7 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
     ? now
     : (tempDate || now);
 
+  // (Time selection functions unchanged)
   const getCandidateTimeForHour = (newHour) => {
     const currentPeriod = baseTime.hour() >= 12 ? "PM" : "AM";
     const newHour24 = currentPeriod === "AM" ? (newHour % 12) : ((newHour % 12) + 12);
@@ -232,14 +269,6 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
   };
 
   // Date cross icon clears the entire value.
-  const clearDate = () => {
-    setTempDate(null);
-    setHasTime(false);
-    onChange("");
-    setDateInputValue("");
-    setTimeInputValue("");
-  };
-
   // Time cross icon clears only the time portion.
   const clearTime = () => {
     if (tempDate) {
@@ -388,41 +417,44 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange }) => {
               input={false}
             />
           </div>
-          <div style={{ marginTop: '1rem', textAlign: 'center' }}>
-            <Button
-              onClick={handleTimeButtonClick}
-              className="custom-datetime-time-button"
-            >
-              {hasTime ? (
-                <div style={{ position: 'relative', width: '100%' }}>
-                  <div style={{ textAlign: 'center'}}>
-                    {tempDate.format("h:mm A")}
+          {/* Conditionally render the time popup only if not date-only */}
+          {!isDateOnly && (
+            <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+              <Button
+                onClick={handleTimeButtonClick}
+                className="custom-datetime-time-button"
+              >
+                {hasTime ? (
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <div style={{ textAlign: 'center'}}>
+                      {tempDate.format("h:mm A")}
+                    </div>
+                    <div 
+                      onClick={(e) => { 
+                        e.stopPropagation();
+                        clearTime();
+                      }}
+                      style={{ 
+                        position: 'absolute', 
+                        right: '8px', 
+                        top: '50%', 
+                        transform: 'translateY(-53%)'
+                      }}
+                      className="custom-cross"
+                    >
+                      <FiX />
+                    </div>
                   </div>
-                  <div 
-                    onClick={(e) => { 
-                      e.stopPropagation();
-                      clearTime();
-                    }}
-                    style={{ 
-                      position: 'absolute', 
-                      right: '8px', 
-                      top: '50%', 
-                      transform: 'translateY(-53%)'
-                    }}
-                    className="custom-cross"
-                  >
-                    <FiX />
-                  </div>
-                </div>
-              ) : (
-                "Time"
-              )}
-            </Button>
-          </div>
+                ) : (
+                  "Time"
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
-      {showTimePopup && (
+      {showTimePopup && !isDateOnly && (
         <div 
           ref={timePopupRef}
           onClick={(e) => e.stopPropagation()}
