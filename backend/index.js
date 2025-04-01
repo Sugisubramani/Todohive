@@ -1,5 +1,4 @@
 require('dotenv').config(); 
-
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -7,6 +6,7 @@ const path = require('path');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const teamRoutes = require('./routes/team.route');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -25,6 +25,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/teams', teamRoutes);
 
 app.use(errorHandler);
 

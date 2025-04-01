@@ -66,6 +66,7 @@ const AttachmentTooltip = ({ show, message }) => {
 
 const AttachmentInput = ({ value, onRename }) => {
   const inputRef = useRef(null);
+  // Initialize fallback with the initial value
   const fallbackName = useRef(value);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipText, setTooltipText] = useState("");
@@ -83,49 +84,36 @@ const AttachmentInput = ({ value, onRename }) => {
   };
 
   const allowedKeys = [
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Home",
-    "End",
-    "Tab",
-    "Shift",
-    "Control",
-    "Alt",
-    "Meta",
+    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+    "Home", "End", "Tab", "Shift", "Control", "Alt", "Meta"
   ];
 
   const handleKeyDown = (e) => {
-    const dotIndex = value.lastIndexOf(".");
+    const currentValue = value || "";
+    const dotIndex = currentValue.lastIndexOf(".");
+    const { selectionStart, selectionEnd } = e.target;
+
+    // **FIX: Allow full deletion**
+    if (selectionStart === 0 && selectionEnd === currentValue.length && (e.key === "Backspace" || e.key === "Delete")) {
+        onRename(""); // Allow clearing the input
+        return;
+    }
+
     if (allowedKeys.includes(e.key)) return;
 
-    if (dotIndex !== -1 && e.target.selectionStart > dotIndex) {
-      e.preventDefault();
-      return;
+    if (dotIndex !== -1 && selectionStart > dotIndex) {
+        e.preventDefault();
+        return;
     }
 
     if (e.key.length === 1 && forbiddenCharsSet.has(e.key)) {
-      e.preventDefault();
-      triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
-      return;
-    }
-
-    if (e.key === "Backspace" || e.key === "Delete") {
-      if (dotIndex === -1) return;
-      const { selectionStart, selectionEnd } = e.target;
-      if (
-        (selectionStart <= dotIndex && selectionEnd > dotIndex) ||
-        (selectionStart === selectionEnd &&
-          ((e.key === "Backspace" && selectionStart === dotIndex + 1) ||
-            (e.key === "Delete" && selectionStart === dotIndex)))
-      ) {
         e.preventDefault();
-        triggerTooltip("You cannot delete the '.' in the extension.");
+        triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
         return;
-      }
     }
-  };
+};
+
+
 
   const handlePaste = (e) => {
     const dotIndex = value.lastIndexOf(".");
@@ -141,16 +129,21 @@ const AttachmentInput = ({ value, onRename }) => {
     clearTooltipIfValid(newValue);
   };
 
+  // On every change, update fallback only if the new value (trimmed) is nonempty and not just an extension.
   const handleChange = (e) => {
     let newValue = e.target.value;
+    const trimmed = newValue.trim();
+    if (trimmed !== "" && !/^\.[^.]+$/.test(trimmed)) {
+      fallbackName.current = newValue;
+    }
     onRename(newValue);
     clearTooltipIfValid(newValue);
   };
 
+  // On blur, if the trimmed value is empty or only an extension, revert to the fallback.
   const handleBlur = (e) => {
-    let newValue = e.target.value;
-    const fallbackExt = fallbackName.current.substring(fallbackName.current.indexOf("."));
-    if (newValue.trim() === "" || newValue === fallbackExt) {
+    let newValue = e.target.value.trim();
+    if (newValue === "" || /^\.[^.]+$/.test(newValue)) {
       onRename(fallbackName.current);
     }
   };
@@ -192,9 +185,12 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       setFormData({
         title: taskToEdit.title,
         description: taskToEdit.description,
-        dueDate: taskToEdit.dueDate
-          ? (taskToEdit.isDateOnly ? taskToEdit.localDueDate : formatDateForInput(taskToEdit.dueDate))
-          : "",
+        dueDate:
+          taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
+            ? (taskToEdit.isDateOnly
+              ? taskToEdit.localDueDate
+              : formatDateForInput(taskToEdit.dueDate))
+            : "",
         priority: taskToEdit.priority,
       });
     } else {
@@ -202,7 +198,6 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       setExistingAttachments([]);
     }
   }, [taskToEdit]);
-
 
   useEffect(() => {
     if (descriptionRef.current) {
@@ -228,20 +223,27 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       file,
       customName: file.name,
     }));
-    setAttachments((prev) => [...prev, ...newFiles]);
+
+    setAttachments((prev) => {
+      const updatedAttachments = [...prev, ...newFiles];
+      return [...updatedAttachments];
+    });
+
+    console.log("Updated Attachments:", newFiles);
   };
 
   const handleRenameNewFile = (index, newName) => {
     const originalFileName = attachments[index].file.name;
     const originalExt = originalFileName.split(".").pop();
-    let sanitized = newName.replace(forbiddenCharsRegex, "");
-    if (!sanitized.endsWith(`.${originalExt}`)) {
-      const dotIndex = sanitized.lastIndexOf(".");
-      if (dotIndex === -1) {
-        sanitized = sanitized + "." + originalExt;
-      } else {
-        sanitized = sanitized.substring(0, dotIndex) + "." + originalExt;
-      }
+    let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
+    let baseName = sanitized;
+    if (sanitized.includes(".")) {
+      baseName = sanitized.substring(0, sanitized.lastIndexOf("."));
+    }
+    if (baseName === "") {
+      sanitized = attachments[index].customName;
+    } else if (!sanitized.endsWith(`.${originalExt}`)) {
+      sanitized = baseName + "." + originalExt;
     }
     setAttachments((prev) =>
       prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
@@ -249,17 +251,21 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
   };
 
   const handleRenameExistingFile = (index, newName) => {
-    const currentName = existingAttachments[index].customName;
-    const originalExt = currentName.split(".").pop();
-    let sanitized = newName.replace(forbiddenCharsRegex, "");
-    if (!sanitized.endsWith(`.${originalExt}`)) {
-      const dotIndex = sanitized.lastIndexOf(".");
-      if (dotIndex === -1) {
-        sanitized = sanitized + "." + originalExt;
-      } else {
-        sanitized = sanitized.substring(0, dotIndex) + "." + originalExt;
-      }
+    const currentName = existingAttachments[index]?.customName || "";
+    const dotIndex = currentName.lastIndexOf(".");
+    const originalExt = dotIndex !== -1 ? currentName.substring(dotIndex) : "";
+    
+    let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
+    let baseName = sanitized;
+    if (sanitized.includes(".")) {
+      baseName = sanitized.substring(0, sanitized.lastIndexOf("."));
     }
+    if (baseName === "") {
+      sanitized = currentName;
+    } else if (originalExt && !sanitized.endsWith(originalExt)) {
+      sanitized = baseName + originalExt;
+    }
+    
     setExistingAttachments((prev) =>
       prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
     );
@@ -294,9 +300,17 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
+
+    const validDueDate =
+      formData.dueDate && moment(formData.dueDate, moment.ISO_8601, true).isValid()
+        ? formData.dueDate
+        : "";
+
     data.append("title", formData.title);
     data.append("description", formData.description);
-    data.append("dueDate", formData.dueDate);
+    if (validDueDate) {
+      data.append("dueDate", validDueDate);
+    }
     data.append("priority", formData.priority);
 
     if (attachments.length > 0) {
@@ -310,6 +324,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       newName: file.customName,
     }));
     data.append("existingAttachments", JSON.stringify(updatedExistingAttachments));
+
     const token = localStorage.getItem("token");
     try {
       if (taskToEdit) {
@@ -374,7 +389,6 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
                 onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
                 isDateOnly={taskToEdit && taskToEdit.isDateOnly}  
               />
-
             </Form.Group>
           </Col>
           <Col>
