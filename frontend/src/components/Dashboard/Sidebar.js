@@ -7,7 +7,6 @@ import { SlLogout } from 'react-icons/sl';
 import { MdBuild } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/Sidebar.css';
-import TeamForm from './TeamForm'; 
 
 const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal }) => {
   const navigate = useNavigate();
@@ -20,9 +19,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
   const [selectedStatus, setSelectedStatus] = useState(["All"]);
   const [statusOpen, setStatusOpen] = useState(false);
   
-  // NEW: State for Team Modal
-  const [openTeamModal, setOpenTeamModal] = useState(false);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -139,23 +135,7 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
             <span style={{ fontSize: '0.9rem' }}>Add Task</span>
           </Button>
 
-          {/* NEW: Add Team Button */}
-          <Button
-            variant="light"
-            className="custom-white-button add-team-button mb-3 w-100 no-hover"
-            onClick={() => setOpenTeamModal(true)}
-          >
-            <FaPlus
-              style={{
-                marginRight: '4px',
-                fontSize: '1rem',
-                position: 'relative',
-                top: '-2px'
-              }}
-            />
-            <span style={{ fontSize: '0.9rem' }}>Add Team</span>
-          </Button>
-
+        
           {/* Existing Dropdowns for Priority and Status */}
           <Dropdown
             className="mb-3 w-100 priority-filter"
@@ -255,13 +235,6 @@ const Sidebar = ({ collapsed, toggleSidebar, onFilterChange, openAddTaskModal })
         </div>
       )}
 
-      {/* NEW: Render TeamForm Modal */}
-      {openTeamModal && (
-        <TeamForm
-          onClose={() => setOpenTeamModal(false)}
-          // Optionally, pass a function to refresh teams if you plan to display them somewhere
-        />
-      )}
     </div>
   );
 };
