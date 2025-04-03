@@ -1,0 +1,46 @@
+.attachment-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    padding-right: 80px;
+  }
+  
+  .attachment-content {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  
+  .attachment-name,
+  .attachment-rename-input {
+    font-size: 14px;
+    color: #333;
+    text-decoration: none;
+  }
+  
+  .attachment-rename-input {
+    width: 100%;
+    border: 1px solid #ccc;
+    padding: 4px;
+    border-radius: 3px;
+    box-sizing: border-box;
+  }
+  
+  .attachment-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+  }
+  
+  .attachment-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+  }
+  

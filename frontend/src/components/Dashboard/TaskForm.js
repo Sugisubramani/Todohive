@@ -7,14 +7,13 @@ import PrioritySelect from "./PrioritySelect";
 import CustomReactDatetimePicker from "./CustomReactDatetimePicker";
 import moment from "moment";
 
-const formatDateForInput = (dateString) => {
+const formatDateForInput = (dateString, isDateOnly = false) => {
   if (!dateString) return "";
-  const mUtc = moment.utc(dateString);
-  if (mUtc.hour() === 0 && mUtc.minute() === 0 && mUtc.second() === 0) {
-    return mUtc.format("YYYY-MM-DD");
+  if (isDateOnly) {
+    return moment.utc(dateString).format("YYYY-MM-DD"); // Only return date
   }
   const mLocal = moment(dateString).local();
-  return mLocal.format("YYYY-MM-DDTHH:mm");
+  return mLocal.isValid() ? mLocal.format("YYYY-MM-DDTHH:mm") : "";
 };
 
 const forbiddenCharsSet = new Set(['\\', '/', ':', '*', '?', '"', '<', '>', '|']);
@@ -95,23 +94,23 @@ const AttachmentInput = ({ value, onRename }) => {
 
     // **FIX: Allow full deletion**
     if (selectionStart === 0 && selectionEnd === currentValue.length && (e.key === "Backspace" || e.key === "Delete")) {
-        onRename(""); // Allow clearing the input
-        return;
+      onRename(""); // Allow clearing the input
+      return;
     }
 
     if (allowedKeys.includes(e.key)) return;
 
     if (dotIndex !== -1 && selectionStart > dotIndex) {
-        e.preventDefault();
-        return;
+      e.preventDefault();
+      return;
     }
 
     if (e.key.length === 1 && forbiddenCharsSet.has(e.key)) {
-        e.preventDefault();
-        triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
-        return;
+      e.preventDefault();
+      triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
+      return;
     }
-};
+  };
 
 
 
@@ -188,7 +187,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
         dueDate:
           taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
             ? (taskToEdit.isDateOnly
-              ? taskToEdit.localDueDate
+              ? moment(taskToEdit.dueDate).format("YYYY-MM-DD") // Ensure date-only format
               : formatDateForInput(taskToEdit.dueDate))
             : "",
         priority: taskToEdit.priority,
@@ -198,6 +197,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       setExistingAttachments([]);
     }
   }, [taskToEdit]);
+  
 
   useEffect(() => {
     if (descriptionRef.current) {
@@ -254,7 +254,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     const currentName = existingAttachments[index]?.customName || "";
     const dotIndex = currentName.lastIndexOf(".");
     const originalExt = dotIndex !== -1 ? currentName.substring(dotIndex) : "";
-    
+
     let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
     let baseName = sanitized;
     if (sanitized.includes(".")) {
@@ -265,7 +265,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     } else if (originalExt && !sanitized.endsWith(originalExt)) {
       sanitized = baseName + originalExt;
     }
-    
+
     setExistingAttachments((prev) =>
       prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
     );
@@ -386,8 +386,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
               <Form.Label>Date &amp; Time</Form.Label>
               <CustomReactDatetimePicker
                 selectedDate={formData.dueDate}
-                onChange={(newDate) => setFormData({ ...formData, dueDate: newDate })}
-                isDateOnly={taskToEdit && taskToEdit.isDateOnly}  
+                onChange={(newDate) => setFormData({ ...formData, dueDate: newDate || "" })}
               />
             </Form.Group>
           </Col>

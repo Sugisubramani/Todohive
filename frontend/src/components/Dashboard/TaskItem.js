@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { createPortal } from "react-dom";
 import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
-import "../../styles/TaskItem.css";
 import moment from "moment";
+import AttachmentItem from "./AttachmentItem";
+import "../../styles/TaskItem.css";
 
 const formatDueDateDisplay = (task) => {
-  if (!task.dueDate) return "";
+  if (!task.dueDate) return null; // Return null instead of an empty string
 
+  
   if (task.isDateOnly && task.localDueDate) {
     return moment(task.localDueDate, "YYYY-MM-DD").format("D MMMM YYYY");
   }
@@ -16,16 +18,16 @@ const formatDueDateDisplay = (task) => {
 };
 
 
+
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
-
   const [currentTime, setCurrentTime] = useState(Date.now());
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentTime(Date.now());
-    }, 60000); 
-
+    }, 60000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -34,19 +36,21 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   };
 
   useEffect(() => {
-    if (!task.dueDate) return;
+    if (!task.dueDate) {
+      setCurrentTime(Date.now());  // Force re-render
+      return;
+    }
     const dueTime = moment(task.dueDate).valueOf();
     const now = Date.now();
     const delay = dueTime - now;
-    
     if (delay > 0 && delay < 60000) {
       const timeoutId = setTimeout(() => {
-        setCurrentTime(Date.now()); 
+        setCurrentTime(Date.now());
       }, delay);
       return () => clearTimeout(timeoutId);
     }
   }, [task.dueDate, currentTime]);
-  
+
   const toggleComplete = async (e) => {
     e.stopPropagation();
     try {
@@ -75,17 +79,19 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   };
 
-  const isDateOnly = task.dueDate ? /T00:00:00\.000Z$/.test(task.dueDate) : false;
-
+  const isDateOnly = task.dueDate && typeof task.dueDate === "string"
+    ? /T00:00:00\.000Z$/.test(task.dueDate)
+    : false;
   const dueDatePassed = task.dueDate
-  ? isDateOnly
-    ? moment().startOf("day").isAfter(moment(task.dueDate).local().startOf("day"))
-    : moment().isAfter(moment(task.dueDate).local())
-  : false;
-
+    ? isDateOnly
+      ? moment().startOf("day").isAfter(moment(task.dueDate).local().startOf("day"))
+      : moment().isAfter(moment(task.dueDate).local())
+    : false;
   const statusLabel = task.completed
     ? "Completed"
     : (!task.completed && dueDatePassed ? "Pending" : "");
+
+    const formattedDueDate = formatDueDateDisplay(task);
 
   return (
     <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
@@ -110,7 +116,10 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             ) : (
               <button
                 className="btn btn-outline-primary btn-sm"
-                onClick={(e) => { e.stopPropagation(); onEditTask(task); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditTask(task);
+                }}
                 style={{ minWidth: "80px" }}
               >
                 View
@@ -123,7 +132,13 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           <div className={`task-item-description ${expanded ? "expanded" : ""}`}>
             <p className="mb-0">{task.description}</p>
             {task.description.length > 100 && (
-              <button className="btn btn-link btn-sm" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
+              <button
+                className="btn btn-link btn-sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpanded(!expanded);
+                }}
+              >
                 {expanded ? "Show Less" : "Show More"}
               </button>
             )}
@@ -131,13 +146,13 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
         )}
 
         <div className="task-item-footer">
-          {task.dueDate && (
-            <div className="task-due-date">
-            <FaRegCalendarAlt className="icon-date" />
-            <small>{formatDueDateDisplay(task)}</small>
-          </div>
-          
-          )}
+        {formattedDueDate && (
+  <div className="task-due-date">
+    <FaRegCalendarAlt className="icon-date" />
+    <small>{formattedDueDate}</small>
+  </div>
+)}
+
           {task.priority && (
             <div className={`task-priority ${task.priority.toLowerCase()}`}>
               <small>Priority: {task.priority}</small>
@@ -148,7 +163,10 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
               <FaPaperclip className="clip-icon" />
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setShowAttachmentsModal(true); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAttachmentsModal(true);
+                }}
                 className="attachments-link"
               >
                 Attachments ({task.attachments.length})
@@ -163,39 +181,31 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           <div
             className="ti-modal-overlay"
             onClick={(e) => {
-              e.preventDefault();
               e.stopPropagation();
               setShowAttachmentsModal(false);
             }}
           >
-            <div className="ti-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="ti-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h5 className="ti-modal-title">{task.title}</h5>
               <hr className="ti-modal-separator" />
-              <ul>
-                {task.attachments.map((file, index) => {
-                  let filePath, displayName;
-                  if (typeof file === "object" && file !== null) {
-                    filePath = file.path;
-                    displayName = file.displayName;
-                  } else {
-                    filePath = file;
-                    displayName = file.split(/[\\/]/).pop();
-                  }
-                  return (
-                    <li key={index} className="ti-small-attachment">
-                      <span className="ti-bullet">&#8226;</span>
-                      <a
-                        href={`http://localhost:5000${filePath}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {displayName}
-                      </a>
-                    </li>
-                  );
-                })}
+              <ul className="ti-attachments-list">
+                {task.attachments.map((file, index) => (
+                  <AttachmentItem
+                    key={index}
+                    file={file}
+                    task={task}
+                    fetchTasks={fetchTasks}
+                    currentPage={currentPage}
+                  />
+                ))}
               </ul>
-              <button className="btn btn-secondary" onClick={() => setShowAttachmentsModal(false)}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowAttachmentsModal(false)}
+              >
                 Close
               </button>
             </div>
@@ -203,6 +213,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           document.body
         )
       }
+
       <span style={{ display: "none" }}>{currentTime}</span>
     </div>
   );

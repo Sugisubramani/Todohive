@@ -46,20 +46,33 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
   };
 
   useEffect(() => {
-    if (tempDate && !dateInputFocused) {
+    if (!tempDate) {
+      setDateInputValue(""); // Force clear date input
+      setTimeInputValue(""); // Also clear time input
+      setIsDateEdited(false);
+      setIsTimeEdited(false);
+      return;
+    }
+  
+    if (!dateInputFocused) {
       setDateInputValue(formatDisplay(tempDate, hasTime));
       setIsDateEdited(false);
-    } else if (!tempDate) {
-      setDateInputValue("Date & Time");
     }
   }, [tempDate, hasTime, dateInputFocused]);
-
+  
   useEffect(() => {
-    if (tempDate && !timeInputFocused) {
+    if (!tempDate) {
+      setTimeInputValue(""); // Force time clear
+      setIsTimeEdited(false);
+      return;
+    }
+  
+    if (!timeInputFocused) {
       setTimeInputValue(tempDate.format("h:mm A"));
       setIsTimeEdited(false);
     }
   }, [tempDate, timeInputFocused]);
+  
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -89,10 +102,13 @@ const CustomPopupDateTimePicker = ({ selectedDate, onChange, isDateOnly }) => {
   const clearDate = () => {
     setTempDate(null);
     setHasTime(false);
-    onChange("");
-    setDateInputValue("");
-    setTimeInputValue("");
+    setDateInputValue("Date & Time"); // Ensures placeholder appears
+    setTimeInputValue(""); // Clears time display
+    setShowPopup(false); // Close popup after clearing
+    setIsDateEdited(false); // Reset edited state
+    onChange(""); // Ensure parent component also updates
   };
+  
 
   const commitDateChange = () => {
     if (dateInputValue.trim() === "") {

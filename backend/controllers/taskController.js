@@ -8,6 +8,65 @@ function getCurrentLocalDateString() {
   return moment().format("YYYY-MM-DD");
 }
 
+// Updated renameAttachment function:
+async function renameAttachment(req, res) {
+  const { id } = req.params; // Task ID
+  let { originalPath, newFileName } = req.body;
+  
+  // Ensure newFileName is trimmed and not empty.
+  newFileName = newFileName.trim();
+  if (!newFileName) {
+    return res.status(400).json({ message: "New file name cannot be empty" });
+  }
+  
+  // Get the original file's extension (e.g. ".png")
+  const originalExt = path.extname(originalPath);
+  // Get only the base part of the new file name (ignore any extension the user might have entered)
+  const baseName = path.basename(newFileName, path.extname(newFileName));
+  
+  // Prevent empty base name.
+  if (!baseName) {
+    return res.status(400).json({ message: "New file name must have characters before the extension" });
+  }
+  
+  // Build the final file name using the original extension.
+  const finalFileName = baseName + originalExt;
+  
+  const uploadsDir = path.join(__dirname, "../uploads");
+  const oldFilePath = path.join(uploadsDir, path.basename(originalPath));
+  const newFilePath = path.join(uploadsDir, finalFileName);
+
+  if (!fs.existsSync(oldFilePath)) {
+    return res.status(400).json({ message: "Original file not found" });
+  }
+
+  try {
+    fs.renameSync(oldFilePath, newFilePath);
+
+    // Update the attachment in the task document.
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: id, "attachments.path": originalPath },
+      { 
+        $set: { 
+          "attachments.$.path": `/uploads/${finalFileName}`,
+          "attachments.$.displayName": finalFileName 
+        } 
+      },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Attachment not found in task" });
+    }
+
+    res.status(200).json({ message: "Attachment renamed", task: updatedTask });
+  } catch (error) {
+    console.error("Error renaming attachment:", error);
+    res.status(500).json({ message: "Error renaming attachment" });
+  }
+}
+exports.renameAttachment = renameAttachment;
+
 exports.createTask = async (req, res) => {
   try {
     const { title, description, dueDate, priority } = req.body;
@@ -20,7 +79,7 @@ exports.createTask = async (req, res) => {
       if (mDueDate.isValid()) {
         isDateOnly = true;
         localDueDate = mDueDate.format("YYYY-MM-DD");
-        finalDueDate = mDueDate.endOf("day").toDate(); 
+        finalDueDate = mDueDate.endOf("day").toDate();
       } else {
         finalDueDate = new Date(dueDate);
       }
@@ -38,7 +97,7 @@ exports.createTask = async (req, res) => {
       title,
       description,
       dueDate: finalDueDate,
-      localDueDate, 
+      localDueDate,
       priority,
       attachments,
       isDateOnly,
@@ -102,7 +161,7 @@ exports.getTasks = async (req, res) => {
           };
         }
       }).filter(Boolean);
-      
+
       if (statusConditions.length > 0) {
         queryObj.$or = statusConditions;
       }
@@ -111,11 +170,7 @@ exports.getTasks = async (req, res) => {
     if (search) {
       const exactRegex = new RegExp(`^${search}$`, "i");
       const exactCount = await Task.countDocuments({ ...queryObj, title: exactRegex });
-      if (exactCount > 0) {
-        queryObj.title = exactRegex;
-      } else {
-        queryObj.title = new RegExp(search, "i");
-      }
+      queryObj.title = exactCount > 0 ? exactRegex : new RegExp(search, "i");
     }
 
     const tasks = await Task.find(queryObj)
@@ -155,54 +210,43 @@ exports.updateTask = async (req, res) => {
     let renamedAttachments = [];
     let originalsToRemove = [];
     for (let file of existingAttachments) {
-      if (!file.originalPath || typeof file.originalPath !== "string") {
-        console.warn("Skipping invalid attachment (missing originalPath):", file);
-        continue;
-      }
-      if (!file.newName || typeof file.newName !== "string") {
-        console.warn("Skipping invalid attachment (missing newName):", file);
-        continue;
-      }
+      if (!file.originalPath || typeof file.originalPath !== "string") continue;
+      if (!file.newName || typeof file.newName !== "string") continue;
+      
       let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
       let newPath = path.join(__dirname, "..", "uploads", file.newName);
+      
       if (fs.existsSync(oldPath)) {
         try {
           fs.renameSync(oldPath, newPath);
-          renamedAttachments.push({
-            path: `/uploads/${file.newName}`,
-            displayName: file.newName,
-          });
+          renamedAttachments.push({ path: `/uploads/${file.newName}`, displayName: file.newName });
           originalsToRemove.push(file.originalPath);
         } catch (err) {
           console.error("Error renaming file:", err);
-          renamedAttachments.push({
-            path: file.originalPath,
-            displayName: path.basename(file.originalPath),
-          });
+          renamedAttachments.push({ path: file.originalPath, displayName: path.basename(file.originalPath) });
         }
       } else {
-        console.warn("File not found on disk, keeping old path:", oldPath);
-        renamedAttachments.push({
-          path: file.originalPath,
-          displayName: path.basename(file.originalPath),
-        });
+        renamedAttachments.push({ path: file.originalPath, displayName: path.basename(file.originalPath) });
       }
     }
-    task.attachments = task.attachments.filter(attachment => !originalsToRemove.includes(attachment.path));
-    const newAttachments = req.files
-      ? req.files.map((file) => ({
-          path: `/uploads/${file.filename}`,
-          displayName: file.originalname,
-        }))
-      : [];
+
+    task.attachments = task.attachments.filter(att => !originalsToRemove.includes(att.path));
+    const newAttachments = req.files ? req.files.map(file => ({ path: `/uploads/${file.filename}`, displayName: file.originalname })) : [];
 
     if (req.body.title !== undefined) task.title = req.body.title;
     if (req.body.description !== undefined) task.description = req.body.description;
-    if (req.body.dueDate !== undefined) {
+    
+    if (!req.body.dueDate) {
+      await Task.updateOne({ _id: task._id }, { $unset: { dueDate: 1, isDateOnly: 1, localDueDate: 1 } });
+      task.dueDate = null;
+      task.isDateOnly = false;
+      task.localDueDate = null;
+    } else {
       let updatedDate = null;
       let updatedIsDateOnly = false;
       let updatedLocalDueDate = null;
       const mDueDate = moment(req.body.dueDate, "YYYY-MM-DD", true);
+      
       if (mDueDate.isValid()) {
         updatedIsDateOnly = true;
         updatedLocalDueDate = mDueDate.format("YYYY-MM-DD");
@@ -210,14 +254,16 @@ exports.updateTask = async (req, res) => {
       } else {
         updatedDate = new Date(req.body.dueDate);
       }
+      
       task.dueDate = updatedDate;
       task.isDateOnly = updatedIsDateOnly;
       task.localDueDate = updatedLocalDueDate;
     }
+    
     if (req.body.priority !== undefined) task.priority = req.body.priority;
     if (req.body.completed !== undefined) task.completed = req.body.completed;
 
-    task.attachments = [ ...task.attachments, ...renamedAttachments, ...newAttachments ];
+    task.attachments = [...task.attachments, ...renamedAttachments, ...newAttachments];
     await task.save();
     res.json(task);
   } catch (err) {
@@ -245,7 +291,11 @@ exports.deleteAttachment = async (req, res) => {
     task.attachments.splice(index, 1);
     await task.save();
     const fullPath = path.resolve(__dirname, "..", filePath);
-    fs.unlink(fullPath, (err) => { if (err) console.error("Error deleting file:", err); });
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    } else {
+      console.warn("File not found on disk:", fullPath);
+    }
     res.json({ message: "Attachment deleted successfully." });
   } catch (error) {
     console.error("Error deleting attachment:", error);
@@ -260,7 +310,11 @@ exports.deleteTask = async (req, res) => {
     task.attachments.forEach((att) => {
       let filePath = typeof att === "string" ? att : att.path;
       const fullPath = path.resolve(__dirname, "..", filePath);
-      fs.unlink(fullPath, (err) => { if (err) console.error("Error deleting file:", err); });
+      if (fs.existsSync(fullPath)) {
+        fs.unlink(fullPath, (err) => {
+          if (err) console.error("Error deleting file:", err);
+        });
+      }
     });
     await Task.findByIdAndDelete(req.params.id);
     res.json({ message: "Task deleted successfully." });
@@ -318,12 +372,12 @@ exports.clearTasks = async (req, res) => {
           };
         }
       }).filter(Boolean);
-      
+
       if (statusConditions.length > 0) {
         queryObj.$or = statusConditions;
       }
     }
-    
+
     console.log("Deleting tasks with query:", queryObj);
     await Task.deleteMany(queryObj);
     res.json({ message: "Filtered tasks cleared" });

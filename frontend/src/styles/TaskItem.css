@@ -279,17 +279,16 @@
 }
 
 .ti-modal-content {
-  background-color: #fff !important;
+  width: auto;
+  min-width: 300px; /* Adjust as needed */
+  max-width: 90%;   /* Prevent it from becoming too wide */
   padding: 20px;
-  border-radius: 6px;
-  max-width: 300px;
-  width: 90%;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  color: #333;
-  transform: translateY(-10px);
-  animation: tiSlideIn 0.3s forwards;
-  text-align: left;
+  margin: 20px auto;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
 
 @keyframes tiSlideIn {
   to {
@@ -361,4 +360,40 @@
 .ti-small-attachment {
   font-size: 0.8rem;
   margin-bottom: 5px;
+} 
+
+.ti-attachment-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.ti-attachment-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.ti-edit-btn, 
+.ti-delete-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: #ee0b0b;
+}
+
+.ti-edit-btn:hover {
+  color: #007bff;
+}
+
+.ti-delete-btn:hover {
+  color: #dc3545;
+}
+
+.ti-rename-input {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-right: 8px;
 }
