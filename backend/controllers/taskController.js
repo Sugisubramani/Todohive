@@ -12,26 +12,21 @@ function getCurrentLocalDateString() {
 async function renameAttachment(req, res) {
   const { id } = req.params; // Task ID
   let { originalPath, newFileName } = req.body;
-  
-  // Ensure newFileName is trimmed and not empty.
+
   newFileName = newFileName.trim();
   if (!newFileName) {
     return res.status(400).json({ message: "New file name cannot be empty" });
   }
-  
-  // Get the original file's extension (e.g. ".png")
+
   const originalExt = path.extname(originalPath);
-  // Get only the base part of the new file name (ignore any extension the user might have entered)
   const baseName = path.basename(newFileName, path.extname(newFileName));
-  
-  // Prevent empty base name.
+
   if (!baseName) {
     return res.status(400).json({ message: "New file name must have characters before the extension" });
   }
-  
-  // Build the final file name using the original extension.
+
   const finalFileName = baseName + originalExt;
-  
+
   const uploadsDir = path.join(__dirname, "../uploads");
   const oldFilePath = path.join(uploadsDir, path.basename(originalPath));
   const newFilePath = path.join(uploadsDir, finalFileName);
@@ -43,14 +38,13 @@ async function renameAttachment(req, res) {
   try {
     fs.renameSync(oldFilePath, newFilePath);
 
-    // Update the attachment in the task document.
     const updatedTask = await Task.findOneAndUpdate(
       { _id: id, "attachments.path": originalPath },
-      { 
-        $set: { 
+      {
+        $set: {
           "attachments.$.path": `/uploads/${finalFileName}`,
-          "attachments.$.displayName": finalFileName 
-        } 
+          "attachments.$.displayName": finalFileName
+        }
       },
       { new: true }
     );
@@ -87,11 +81,12 @@ exports.createTask = async (req, res) => {
 
     const attachments = req.files
       ? req.files.map((file) => ({
-          path: `/uploads/${file.filename}`,
-          displayName: file.originalname,
-        }))
+        path: `/uploads/${file.filename}`,
+        displayName: file.originalname,
+      }))
       : [];
 
+    // NEW: We add teamId if provided.
     const task = new Task({
       user: req.user.id,
       title,
@@ -101,6 +96,7 @@ exports.createTask = async (req, res) => {
       priority,
       attachments,
       isDateOnly,
+      teamId: req.body.teamId ? req.body.teamId : null,
     });
 
     await task.save();
@@ -113,10 +109,15 @@ exports.createTask = async (req, res) => {
 
 exports.getTasks = async (req, res) => {
   try {
-    const { page = 1, priority, search, status } = req.query;
+    const { page = 1, priority, search, status, teamId } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
-    const queryObj = { user: req.user.id };
+
+    // If teamId is provided, we'll filter by it. Otherwise, we're in personal mode.
+    // In personal mode, return only tasks where teamId is null or does not exist.
+    const queryObj = teamId
+      ? { teamId }
+      : { user: req.user.id, $or: [{ teamId: null }, { teamId: { $exists: false } }] };
 
     if (priority && priority !== "Priority") {
       if (priority.includes(",")) {
@@ -131,7 +132,7 @@ exports.getTasks = async (req, res) => {
       let statusArr = [];
       if (typeof status === "string") {
         statusArr = status.includes(",")
-          ? status.split(",").map(s => s.trim())
+          ? status.split(",").map((s) => s.trim())
           : [status];
       } else if (Array.isArray(status)) {
         statusArr = status;
@@ -139,7 +140,7 @@ exports.getTasks = async (req, res) => {
       const now = new Date();
       const currentLocalDate = getCurrentLocalDateString();
 
-      const statusConditions = statusArr.map(s => {
+      const statusConditions = statusArr.map((s) => {
         if (s === "Completed") {
           return { completed: true };
         } else if (s === "Active") {
@@ -148,16 +149,16 @@ exports.getTasks = async (req, res) => {
             $or: [
               { dueDate: null },
               { isDateOnly: false, dueDate: { $gt: now } },
-              { isDateOnly: true, localDueDate: { $gte: currentLocalDate } }
-            ]
+              { isDateOnly: true, localDueDate: { $gte: currentLocalDate } },
+            ],
           };
         } else if (s === "Pending") {
           return {
             completed: false,
             $or: [
               { isDateOnly: false, dueDate: { $lte: now } },
-              { isDateOnly: true, localDueDate: { $lt: currentLocalDate } }
-            ]
+              { isDateOnly: true, localDueDate: { $lt: currentLocalDate } },
+            ],
           };
         }
       }).filter(Boolean);
@@ -184,6 +185,7 @@ exports.getTasks = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.updateTask = async (req, res) => {
   try {
@@ -212,10 +214,10 @@ exports.updateTask = async (req, res) => {
     for (let file of existingAttachments) {
       if (!file.originalPath || typeof file.originalPath !== "string") continue;
       if (!file.newName || typeof file.newName !== "string") continue;
-      
+
       let oldPath = path.join(__dirname, "..", file.originalPath.replace("/uploads/", "uploads/"));
       let newPath = path.join(__dirname, "..", "uploads", file.newName);
-      
+
       if (fs.existsSync(oldPath)) {
         try {
           fs.renameSync(oldPath, newPath);
@@ -235,7 +237,7 @@ exports.updateTask = async (req, res) => {
 
     if (req.body.title !== undefined) task.title = req.body.title;
     if (req.body.description !== undefined) task.description = req.body.description;
-    
+
     if (!req.body.dueDate) {
       await Task.updateOne({ _id: task._id }, { $unset: { dueDate: 1, isDateOnly: 1, localDueDate: 1 } });
       task.dueDate = null;
@@ -245,21 +247,35 @@ exports.updateTask = async (req, res) => {
       let updatedDate = null;
       let updatedIsDateOnly = false;
       let updatedLocalDueDate = null;
-      const mDueDate = moment(req.body.dueDate, "YYYY-MM-DD", true);
-      
-      if (mDueDate.isValid()) {
-        updatedIsDateOnly = true;
-        updatedLocalDueDate = mDueDate.format("YYYY-MM-DD");
-        updatedDate = mDueDate.endOf("day").toDate();
-      } else {
+
+      // In updateTask...
+      if (
+        (req.body.fullDate && (req.body.fullDate === "true" || req.body.fullDate === true)) ||
+        req.body.dueDate.includes("T")
+      ) {
+        // full date/time branch here
         updatedDate = new Date(req.body.dueDate);
+        updatedIsDateOnly = false;
+        updatedLocalDueDate = null;
+      } else {
+        // Date-only branch
+        const mDueDate = moment(req.body.dueDate, "YYYY-MM-DD", true);
+        if (mDueDate.isValid()) {
+          updatedIsDateOnly = true;
+          updatedLocalDueDate = mDueDate.format("YYYY-MM-DD");
+          // Here we still save the Date as the end of day for comparisons.
+          updatedDate = mDueDate.endOf("day").toDate();
+        } else {
+          updatedDate = new Date(req.body.dueDate);
+        }
       }
-      
+
+
       task.dueDate = updatedDate;
       task.isDateOnly = updatedIsDateOnly;
       task.localDueDate = updatedLocalDueDate;
     }
-    
+
     if (req.body.priority !== undefined) task.priority = req.body.priority;
     if (req.body.completed !== undefined) task.completed = req.body.completed;
 
@@ -271,6 +287,7 @@ exports.updateTask = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
 
 exports.deleteAttachment = async (req, res) => {
   try {
@@ -331,8 +348,10 @@ exports.clearTasks = async (req, res) => {
     }
     console.log("Clearing tasks for user:", req.user.id);
     const userId = new mongoose.Types.ObjectId(req.user.id);
-    const queryObj = { user: userId };
-    const { priority, status } = req.query;
+    // NEW: Check if a teamId query parameter exists. If so, clear tasks for that team.
+    const { teamId, priority, status } = req.query;
+    const queryObj = teamId ? { teamId } : { user: userId };
+
     if (priority && priority !== "All") {
       if (priority.includes(",")) {
         const priorities = priority.split(",").map(p => p.trim());

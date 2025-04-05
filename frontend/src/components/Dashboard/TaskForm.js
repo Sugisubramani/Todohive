@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+// src/components/Dashboard/TaskForm.js
+import React, { useState, useEffect, useRef, useContext } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
 import { FiTrash2 } from "react-icons/fi";
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
+import { TeamContext } from "../../context/TeamContext";
 import CustomReactDatetimePicker from "./CustomReactDatetimePicker";
 import moment from "moment";
 
 const formatDateForInput = (dateString, isDateOnly = false) => {
   if (!dateString) return "";
   if (isDateOnly) {
-    return moment.utc(dateString).format("YYYY-MM-DD"); // Only return date
+    return moment.utc(dateString).format("YYYY-MM-DD");
   }
   const mLocal = moment(dateString).local();
   return mLocal.isValid() ? mLocal.format("YYYY-MM-DDTHH:mm") : "";
@@ -45,7 +47,6 @@ const AttachmentTooltip = ({ show, message }) => {
       >
         <div
           style={{
-            content: '""',
             position: "absolute",
             top: "-5px",
             left: "10%",
@@ -65,8 +66,7 @@ const AttachmentTooltip = ({ show, message }) => {
 
 const AttachmentInput = ({ value, onRename }) => {
   const inputRef = useRef(null);
-  // Initialize fallback with the initial value
-  const fallbackName = useRef(value);
+  // Remove fallbackName usage so that on blur we always clear to empty.
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipText, setTooltipText] = useState("");
 
@@ -83,8 +83,17 @@ const AttachmentInput = ({ value, onRename }) => {
   };
 
   const allowedKeys = [
-    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
-    "Home", "End", "Tab", "Shift", "Control", "Alt", "Meta"
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "Tab",
+    "Shift",
+    "Control",
+    "Alt",
+    "Meta",
   ];
 
   const handleKeyDown = (e) => {
@@ -92,27 +101,25 @@ const AttachmentInput = ({ value, onRename }) => {
     const dotIndex = currentValue.lastIndexOf(".");
     const { selectionStart, selectionEnd } = e.target;
 
-    // **FIX: Allow full deletion**
-    if (selectionStart === 0 && selectionEnd === currentValue.length && (e.key === "Backspace" || e.key === "Delete")) {
-      onRename(""); // Allow clearing the input
+    if (
+      selectionStart === 0 &&
+      selectionEnd === currentValue.length &&
+      (e.key === "Backspace" || e.key === "Delete")
+    ) {
+      onRename("");
       return;
     }
-
     if (allowedKeys.includes(e.key)) return;
-
     if (dotIndex !== -1 && selectionStart > dotIndex) {
       e.preventDefault();
       return;
     }
-
     if (e.key.length === 1 && forbiddenCharsSet.has(e.key)) {
       e.preventDefault();
       triggerTooltip('A file name can’t contain: \\ / : * ? " < > |');
       return;
     }
   };
-
-
 
   const handlePaste = (e) => {
     const dotIndex = value.lastIndexOf(".");
@@ -128,22 +135,17 @@ const AttachmentInput = ({ value, onRename }) => {
     clearTooltipIfValid(newValue);
   };
 
-  // On every change, update fallback only if the new value (trimmed) is nonempty and not just an extension.
   const handleChange = (e) => {
     let newValue = e.target.value;
-    const trimmed = newValue.trim();
-    if (trimmed !== "" && !/^\.[^.]+$/.test(trimmed)) {
-      fallbackName.current = newValue;
-    }
     onRename(newValue);
     clearTooltipIfValid(newValue);
   };
 
-  // On blur, if the trimmed value is empty or only an extension, revert to the fallback.
+  // Update onBlur: if field is empty, pass an empty string.
   const handleBlur = (e) => {
     let newValue = e.target.value.trim();
     if (newValue === "" || /^\.[^.]+$/.test(newValue)) {
-      onRename(fallbackName.current);
+      onRename("");
     }
   };
 
@@ -165,39 +167,29 @@ const AttachmentInput = ({ value, onRename }) => {
   );
 };
 
-const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }) => {
+const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage, teamId }) => {
+  const { selectedTeam } = useContext(TeamContext);
   const [formData, setFormData] = useState({
     title: taskToEdit ? taskToEdit.title : "",
     description: taskToEdit ? taskToEdit.description : "",
-    dueDate: taskToEdit && taskToEdit.dueDate ? formatDateForInput(taskToEdit.dueDate) : "",
+    dueDate: taskToEdit && taskToEdit.dueDate
+      ? formatDateForInput(taskToEdit.dueDate, taskToEdit.isDateOnly)
+      : "",
     priority: taskToEdit ? taskToEdit.priority : "",
   });
-
   const [attachments, setAttachments] = useState([]);
-  const [existingAttachments, setExistingAttachments] = useState([]);
+  // Existing attachments removed.
+
+  // isEditingTime: true means we show full datetime; false means date-only.
+  const [isEditingTime, setIsEditingTime] = useState(() => {
+    if (taskToEdit && taskToEdit.dueDate) {
+      return !taskToEdit.isDateOnly;
+    }
+    return true; // default for new tasks
+  });
 
   const descriptionRef = useRef(null);
   const titleInputRef = useRef(null);
-
-  useEffect(() => {
-    if (taskToEdit) {
-      setFormData({
-        title: taskToEdit.title,
-        description: taskToEdit.description,
-        dueDate:
-          taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
-            ? (taskToEdit.isDateOnly
-              ? moment(taskToEdit.dueDate).format("YYYY-MM-DD") // Ensure date-only format
-              : formatDateForInput(taskToEdit.dueDate))
-            : "",
-        priority: taskToEdit.priority,
-      });
-    } else {
-      setFormData({ title: "", description: "", dueDate: "", priority: "" });
-      setExistingAttachments([]);
-    }
-  }, [taskToEdit]);
-  
 
   useEffect(() => {
     if (descriptionRef.current) {
@@ -205,6 +197,25 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
     }
   }, [formData.description]);
+
+  useEffect(() => {
+    if (taskToEdit) {
+      const newDueDate = taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
+        ? (taskToEdit.isDateOnly
+            ? moment(taskToEdit.dueDate).format("YYYY-MM-DD")
+            : formatDateForInput(taskToEdit.dueDate))
+        : "";
+      setFormData({
+        title: taskToEdit.title,
+        description: taskToEdit.description,
+        dueDate: newDueDate,
+        priority: taskToEdit.priority,
+      });
+      setIsEditingTime(!taskToEdit.isDateOnly);
+    } else {
+      setFormData({ title: "", description: "", dueDate: "", priority: "" });
+    }
+  }, [taskToEdit]);
 
   const handleTitleChange = (e) => {
     setFormData((prev) => ({ ...prev, title: e.target.value }));
@@ -223,50 +234,28 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       file,
       customName: file.name,
     }));
-
-    setAttachments((prev) => {
-      const updatedAttachments = [...prev, ...newFiles];
-      return [...updatedAttachments];
-    });
-
+    setAttachments((prev) => [...prev, ...newFiles]);
     console.log("Updated Attachments:", newFiles);
   };
 
   const handleRenameNewFile = (index, newName) => {
     const originalFileName = attachments[index].file.name;
+    // If the field (after trimming) is empty, revert completely to the original file name.
+    if (newName.trim() === "") {
+      setAttachments((prev) =>
+        prev.map((file, i) =>
+          i === index ? { ...file, customName: originalFileName } : file
+        )
+      );
+      return;
+    }
     const originalExt = originalFileName.split(".").pop();
     let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
-    let baseName = sanitized;
-    if (sanitized.includes(".")) {
-      baseName = sanitized.substring(0, sanitized.lastIndexOf("."));
-    }
-    if (baseName === "") {
-      sanitized = attachments[index].customName;
-    } else if (!sanitized.endsWith(`.${originalExt}`)) {
-      sanitized = baseName + "." + originalExt;
+    // If the sanitized name does not contain a dot, append the original extension.
+    if (!sanitized.includes(".")) {
+      sanitized = sanitized + "." + originalExt;
     }
     setAttachments((prev) =>
-      prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
-    );
-  };
-
-  const handleRenameExistingFile = (index, newName) => {
-    const currentName = existingAttachments[index]?.customName || "";
-    const dotIndex = currentName.lastIndexOf(".");
-    const originalExt = dotIndex !== -1 ? currentName.substring(dotIndex) : "";
-
-    let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
-    let baseName = sanitized;
-    if (sanitized.includes(".")) {
-      baseName = sanitized.substring(0, sanitized.lastIndexOf("."));
-    }
-    if (baseName === "") {
-      sanitized = currentName;
-    } else if (originalExt && !sanitized.endsWith(originalExt)) {
-      sanitized = baseName + originalExt;
-    }
-
-    setExistingAttachments((prev) =>
       prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
     );
   };
@@ -275,26 +264,9 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRemoveExistingAttachment = async (index) => {
-    if (!taskToEdit) return;
-    const filePathToRemove = existingAttachments[index].originalPath;
-    const token = localStorage.getItem("token");
-    try {
-      await axios.delete(`http://localhost:5000/api/tasks/${taskToEdit._id}/attachments`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { filePath: filePathToRemove },
-      });
-      setExistingAttachments((prev) => prev.filter((_, i) => i !== index));
-    } catch (error) {
-      console.error("Error deleting attachment:", error);
-      alert("Failed to delete attachment. Please try again.");
-    }
-  };
-
   const clearForm = () => {
     setFormData({ title: "", description: "", dueDate: "", priority: "" });
     setAttachments([]);
-    setExistingAttachments([]);
   };
 
   const handleSubmit = async (e) => {
@@ -313,17 +285,17 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
     }
     data.append("priority", formData.priority);
 
+    const teamIdToSend = teamId || (selectedTeam ? selectedTeam._id : null);
+    if (teamIdToSend) {
+      data.append("teamId", teamIdToSend);
+    }
+
     if (attachments.length > 0) {
       attachments.forEach((item) => {
         const renamedFile = new File([item.file], item.customName, { type: item.file.type });
         data.append("attachments", renamedFile);
       });
     }
-    const updatedExistingAttachments = existingAttachments.map((file) => ({
-      originalPath: file.originalPath,
-      newName: file.customName,
-    }));
-    data.append("existingAttachments", JSON.stringify(updatedExistingAttachments));
 
     const token = localStorage.getItem("token");
     try {
@@ -343,7 +315,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
       console.error("Error submitting task:", error);
       alert(
         error.response?.data?.message ||
-        "Task submission failed. Please try again."
+          "Task submission failed. Please try again."
       );
     }
   };
@@ -382,12 +354,55 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
 
         <Row className="mb-3">
           <Col>
-            <Form.Group controlId="formDueDate">
-              <Form.Label>Date &amp; Time</Form.Label>
+            <Form.Group controlId="formDueDate" style={{ position: "relative" }}>
+              <Form.Label>Date {isEditingTime ? "& Time" : ""}</Form.Label>
               <CustomReactDatetimePicker
+                mode={isEditingTime ? "datetime-local" : "date"}
                 selectedDate={formData.dueDate}
-                onChange={(newDate) => setFormData({ ...formData, dueDate: newDate || "" })}
+                onChange={(newDate) =>
+                  setFormData({ ...formData, dueDate: newDate || "" })
+                }
               />
+              {formData.dueDate && (
+                <Button
+                  variant="link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!isEditingTime) {
+                      let newDueDate = formData.dueDate;
+                      if (newDueDate && !newDueDate.includes("T")) {
+                        newDueDate = newDueDate + "T00:00";
+                      }
+                      setFormData({ ...formData, dueDate: newDueDate });
+                    } else {
+                      let newDueDate = formData.dueDate;
+                      if (newDueDate && newDueDate.includes("T")) {
+                        newDueDate = newDueDate.split("T")[0];
+                      }
+                      setFormData({ ...formData, dueDate: newDueDate });
+                    }
+                    setIsEditingTime(!isEditingTime);
+                  }}
+                  style={{
+                    position: "absolute",
+                    right: "0px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    fontSize: "0.1rem",
+                    lineHeight: "0",
+                    padding: "0",
+                    margin: "0",
+                    width: "20px",
+                    height: "20px",
+                    border: "none",
+                    background: "transparent",
+                    opacity: 0,
+                    cursor: "default"
+                  }}
+                >
+                  {isEditingTime ? "Remove Time" : "Add Time"}
+                </Button>
+              )}
             </Form.Group>
           </Col>
           <Col>
@@ -395,7 +410,9 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
               <Form.Label>Priority</Form.Label>
               <PrioritySelect
                 value={formData.priority}
-                onChange={(newPriority) => setFormData({ ...formData, priority: newPriority })}
+                onChange={(newPriority) =>
+                  setFormData({ ...formData, priority: newPriority })
+                }
               />
             </Form.Group>
           </Col>
@@ -415,24 +432,10 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
                   value={item.customName}
                   onRename={(newVal) => handleRenameNewFile(index, newVal)}
                 />
-                <span className="attachment-delete-btn" onClick={() => handleRemoveNewAttachment(index)}>
-                  <FiTrash2 size={18} />
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {existingAttachments.length > 0 && (
-          <div className="mb-3">
-            <h6>Existing Attachments:</h6>
-            {existingAttachments.map((item, index) => (
-              <div key={index} className="attachment-wrapper">
-                <AttachmentInput
-                  value={item.customName}
-                  onRename={(newVal) => handleRenameExistingFile(index, newVal)}
-                />
-                <span className="attachment-delete-btn" onClick={() => handleRemoveExistingAttachment(index)}>
+                <span
+                  className="attachment-delete-btn"
+                  onClick={() => handleRemoveNewAttachment(index)}
+                >
                   <FiTrash2 size={18} />
                 </span>
               </div>
@@ -445,7 +448,7 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage }
             Cancel
           </Button>
           <Button type="submit" variant="outline-primary">
-            Submit
+            {taskToEdit ? "Update Task" : "Add Task"}
           </Button>
         </div>
       </Form>

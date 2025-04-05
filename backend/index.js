@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const errorHandler = require('./middleware/errorHandler');
+const teamRoutes = require("./routes/teamRoutes");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use("/api/teams", teamRoutes);
 
 app.use(errorHandler);
 

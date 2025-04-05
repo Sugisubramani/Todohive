@@ -7,17 +7,14 @@ import AttachmentItem from "./AttachmentItem";
 import "../../styles/TaskItem.css";
 
 const formatDueDateDisplay = (task) => {
-  if (!task.dueDate) return null; // Return null instead of an empty string
+  if (!task.dueDate) return null;
 
-  
   if (task.isDateOnly && task.localDueDate) {
     return moment(task.localDueDate, "YYYY-MM-DD").format("D MMMM YYYY");
   }
 
   return moment(task.dueDate).local().format("D MMMM YYYY, h:mm A");
 };
-
-
 
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
@@ -37,7 +34,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
 
   useEffect(() => {
     if (!task.dueDate) {
-      setCurrentTime(Date.now());  // Force re-render
+      setCurrentTime(Date.now());
       return;
     }
     const dueTime = moment(task.dueDate).valueOf();
@@ -51,20 +48,41 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   }, [task.dueDate, currentTime]);
 
-  const toggleComplete = async (e) => {
-    e.stopPropagation();
-    try {
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `http://localhost:5000/api/tasks/${task._id}`,
-        { completed: !task.completed },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      fetchTasks(currentPage);
-    } catch (error) {
-      console.error("Error toggling task:", error);
-    }
-  };
+  // Updated toggleComplete: check if date-only and send the proper values
+const toggleComplete = async (e) => {
+  e.stopPropagation();
+  try {
+    const token = localStorage.getItem("token");
+
+    // For date-only tasks, format as "YYYY-MM-DD". Otherwise, send full ISO.
+    const updatedDueDate = task.dueDate
+      ? task.isDateOnly
+        ? moment(task.dueDate).format("YYYY-MM-DD")
+        : new Date(task.dueDate).toISOString()
+      : null;
+
+    // Set fullDate flag: false if date-only, true otherwise.
+    const updatedFullDate = task.dueDate ? !task.isDateOnly : false;
+
+    await axios.put(
+      `http://localhost:5000/api/tasks/${task._id}`,
+      {
+        title: task.title,
+        description: task.description,
+        dueDate: updatedDueDate,
+        fullDate: updatedFullDate,
+        priority: task.priority,
+        attachments: task.attachments,
+        completed: !task.completed,
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    fetchTasks(currentPage);
+  } catch (error) {
+    console.error("Error toggling task:", error);
+  }
+};
+
 
   const handleDelete = async (e) => {
     e.stopPropagation();
@@ -79,9 +97,10 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   };
 
-  const isDateOnly = task.dueDate && typeof task.dueDate === "string"
-    ? /T00:00:00\.000Z$/.test(task.dueDate)
-    : false;
+  const isDateOnly =
+    task.dueDate && typeof task.dueDate === "string"
+      ? /T00:00:00\.000Z$/.test(task.dueDate)
+      : false;
   const dueDatePassed = task.dueDate
     ? isDateOnly
       ? moment().startOf("day").isAfter(moment(task.dueDate).local().startOf("day"))
@@ -91,10 +110,13 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     ? "Completed"
     : (!task.completed && dueDatePassed ? "Pending" : "");
 
-    const formattedDueDate = formatDueDateDisplay(task);
+  const formattedDueDate = formatDueDateDisplay(task);
 
   return (
-    <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
+    <div
+      className={`card task-item ${task.completed ? "completed" : ""}`}
+      onClick={handleItemClick}
+    >
       <div className="card-body p-2">
         <div className="task-item-header">
           <input
@@ -106,11 +128,19 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           />
           <h5 className="task-title">
             <span className="title-text">{task.title}</span>
-            {statusLabel && <span className={`status-label ${statusLabel.toLowerCase()}`}>{statusLabel}</span>}
+            {statusLabel && (
+              <span className={`status-label ${statusLabel.toLowerCase()}`}>
+                {statusLabel}
+              </span>
+            )}
           </h5>
           <div className="action-buttons">
             {task.completed ? (
-              <button className="btn btn-outline-danger btn-sm" onClick={handleDelete} style={{ minWidth: "80px" }}>
+              <button
+                className="btn btn-outline-danger btn-sm"
+                onClick={handleDelete}
+                style={{ minWidth: "80px" }}
+              >
                 Delete
               </button>
             ) : (
@@ -133,7 +163,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             <p className="mb-0">{task.description}</p>
             {task.description.length > 100 && (
               <button
-                className="btn btn-link btn-sm" 
+                className="btn btn-link btn-sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpanded(!expanded);
@@ -146,12 +176,12 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
         )}
 
         <div className="task-item-footer">
-        {formattedDueDate && (
-  <div className="task-due-date">
-    <FaRegCalendarAlt className="icon-date" />
-    <small>{formattedDueDate}</small>
-  </div>
-)}
+          {formattedDueDate && (
+            <div className="task-due-date">
+              <FaRegCalendarAlt className="icon-date" />
+              <small>{formattedDueDate}</small>
+            </div>
+          )}
 
           {task.priority && (
             <div className={`task-priority ${task.priority.toLowerCase()}`}>
@@ -185,10 +215,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
               setShowAttachmentsModal(false);
             }}
           >
-            <div
-              className="ti-modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className="ti-modal-content" onClick={(e) => e.stopPropagation()}>
               <h5 className="ti-modal-title">{task.title}</h5>
               <hr className="ti-modal-separator" />
               <ul className="ti-attachments-list">

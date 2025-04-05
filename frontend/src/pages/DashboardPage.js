@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+// src/pages/DashboardPage.js
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  useContext
+} from "react";
 import axios from "axios";
 import TaskList from "../components/Dashboard/TaskList";
 import Sidebar from "../components/Dashboard/Sidebar";
@@ -8,28 +16,21 @@ import { CgMoreVertical } from "react-icons/cg";
 import { VscClearAll } from "react-icons/vsc";
 import { MdBuild } from "react-icons/md";
 import TaskForm from "../components/Dashboard/TaskForm";
+import { TeamContext } from "../context/TeamContext";
 import "../styles/Dashboard.css";
 
-const DashboardPage = () => {
+const DashboardPage = ({ teamName }) => {
+  const { selectedTeam, setSelectedTeam } = useContext(TeamContext);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filters, setFilters] = useState({ priority: ["All"], status: "All" });
   const [searchText, setSearchText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
   const [showMenu, setShowMenu] = useState(false);
-
   const [tasks, setTasks] = useState([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
-
   const [currentTime, setCurrentTime] = useState(Date.now());
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 60000); 
-    return () => clearInterval(intervalId);
-  }, []);
-
   const moreMenuRef = useRef(null);
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
@@ -37,41 +38,72 @@ const DashboardPage = () => {
   const isAllSelected = (filterArray) =>
     filterArray.includes("All") || filterArray.length === 0;
 
-  const fetchTasks = useCallback(async (currentPage = 1) => {
-    try {
-      let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
-
-      if (!isAllSelected(filters.priority)) {
-        url += `&priority=${filters.priority.join(",")}`;
+  const fetchTasks = useCallback(
+    async (currentPage = 1) => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Please log in first.");
+        return;
       }
-      if (filters.status !== "All") {
-        url += `&status=${filters.status}`;
+      try {
+        let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
+        if (selectedTeam) {
+          url += `&teamId=${selectedTeam._id}`;
+        }
+        if (!isAllSelected(filters.priority)) {
+          url += `&priority=${filters.priority.join(",")}`;
+        }
+        if (filters.status !== "All") {
+          url += `&status=${filters.status}`;
+        }
+        if (searchText.trim()) {
+          url += `&search=${encodeURIComponent(searchText.trim())}`;
+        }
+        console.log("Fetching tasks from URL:", url);
+        const res = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log("API Response:", res.data);
+        if (res.data && typeof res.data === "object") {
+          setTasks(
+            res.data.tasks.sort(
+              (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+            )
+          );
+          setPages(res.data.pages);
+          setPage(Number(res.data.page)); // Ensure page is a number
+        } else {
+          console.error("Unexpected API response format:", res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
       }
-      if (searchText.trim()) {
-        url += `&search=${encodeURIComponent(searchText.trim())}`;
-      }
+    },
+    [selectedTeam, filters, searchText]
+  );
 
-      console.log("Fetching tasks from URL:", url);
-      const res = await axios.get(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-
-      setTasks(
-        res.data.tasks.sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        )
-      );
-      setPages(res.data.pages);
-      setPage(res.data.page);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
+  // If no team name is provided, clear the selected team.
+  useLayoutEffect(() => {
+    if (!teamName) {
+      setSelectedTeam(null);
+      localStorage.removeItem("selectedTeam");
     }
-  }, [filters, searchText]);
+  }, [teamName, setSelectedTeam]);
 
+  // Fetch tasks only when selectedTeam, filters, or searchText change.
   useEffect(() => {
     fetchTasks(1);
-  }, [fetchTasks]);
+    // We intentionally omit fetchTasks from the dependency array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTeam, filters, searchText]);
 
+  // Update current time every minute.
+  useEffect(() => {
+    const intervalId = setInterval(() => setCurrentTime(Date.now()), 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Close the "More" menu when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
@@ -79,9 +111,22 @@ const DashboardPage = () => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () =>
-      document.removeEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // When a team name is provided, update the selected team only if it has really changed.
+  useEffect(() => {
+    if (teamName) {
+      const storedTeams = JSON.parse(localStorage.getItem("teams")) || [];
+      const matchingTeam = storedTeams.find((team) => team.name === teamName);
+      if (
+        matchingTeam &&
+        (!selectedTeam || matchingTeam._id !== selectedTeam._id)
+      ) {
+        setSelectedTeam(matchingTeam);
+      }
+    }
+  }, [teamName, selectedTeam, setSelectedTeam]);
 
   const openAddTaskModal = () => {
     setEditTask(null);
@@ -99,7 +144,7 @@ const DashboardPage = () => {
     if (!editTask) return;
     try {
       await axios.delete(`http://localhost:5000/api/tasks/${editTask._id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       fetchTasks(page);
       closeModal();
@@ -113,7 +158,7 @@ const DashboardPage = () => {
   const clearAllTasks = async () => {
     try {
       let url = `http://localhost:5000/api/tasks/clear`;
-      let queryParams = [];
+      const queryParams = [];
       if (!isAllSelected(filters.priority)) {
         queryParams.push(`priority=${filters.priority.join(",")}`);
       }
@@ -123,10 +168,9 @@ const DashboardPage = () => {
       if (queryParams.length > 0) {
         url += "?" + queryParams.join("&");
       }
-
       console.log("Clearing tasks with URL:", url);
       await axios.delete(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
       fetchTasks(page);
       setShowMenu(false);
@@ -143,10 +187,14 @@ const DashboardPage = () => {
         toggleSidebar={toggleSidebar}
         onFilterChange={setFilters}
         openAddTaskModal={openAddTaskModal}
+        onTeamSelect={setSelectedTeam}
       />
 
       <div className="flex-grow-1 p-3 main-content">
-        <div className="header-area" style={{ position: "relative" }}>
+        <div
+          className="header-area"
+          style={{ position: "relative", textAlign: "center" }}
+        >
           <a
             href="#!"
             className="main-add-task text-decoration-none"
@@ -154,14 +202,7 @@ const DashboardPage = () => {
           >
             + Add Task
           </a>
-
-          <div
-            style={{
-              position: "absolute",
-              top: "-18px",
-              right: "1px",
-            }}
-          >
+          <div style={{ position: "absolute", top: "-18px", right: "1px" }}>
             <div style={{ position: "relative", display: "inline-block" }}>
               <span
                 className="customize-label"
@@ -171,13 +212,12 @@ const DashboardPage = () => {
                   alignItems: "center",
                   fontWeight: "bold",
                   fontSize: "1rem",
-                  cursor: "pointer",
+                  cursor: "pointer"
                 }}
               >
                 <CgMoreVertical size={20} style={{ marginRight: "4px" }} />
                 More
               </span>
-
               {showMenu && (
                 <div
                   ref={moreMenuRef}
@@ -186,7 +226,7 @@ const DashboardPage = () => {
                     position: "absolute",
                     top: "calc(100% + 40px)",
                     right: "0",
-                    left: "auto",
+                    left: "auto"
                   }}
                 >
                   <button className="dropdown-item" onClick={clearAllTasks}>
@@ -248,7 +288,7 @@ const DashboardPage = () => {
               style={{
                 border: "none",
                 textDecoration: "none",
-                color: "#dc3545",
+                color: "#dc3545"
               }}
             >
               <FiTrash2 size={20} />
@@ -262,6 +302,7 @@ const DashboardPage = () => {
             clearEdit={() => setEditTask(null)}
             closeModal={closeModal}
             currentPage={page}
+            teamId={selectedTeam ? selectedTeam._id : null}
           />
         </Modal.Body>
       </Modal>
