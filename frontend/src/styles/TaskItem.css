@@ -397,3 +397,10 @@
   padding: 2px 4px;
   margin-right: 8px;
 }
+
+.task-created-by {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-left: auto;
+}

@@ -20,6 +20,7 @@ async function sendInvitationEmail(toEmail, invitationLink, teamName) {
     html: `
       <p>You have been invited to join the team <strong>${teamName}</strong>.</p>
       <p>Please click <a href="${invitationLink}">here</a> to accept your invitation.</p>
+      <p>After accepting, you will be redirected to your personal dashboard where you can access the team from the sidebar.</p>
       <p>If you did not expect this email, please ignore it.</p>
     `,
   };

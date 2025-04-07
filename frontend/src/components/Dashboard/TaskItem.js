@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
 import moment from "moment";
 import AttachmentItem from "./AttachmentItem";
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
+import Popover from 'react-bootstrap/Popover';
 import "../../styles/TaskItem.css";
 
 const formatDueDateDisplay = (task) => {
@@ -20,6 +22,12 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const currentUser = JSON.parse(localStorage.getItem('user'));
+
+  // Debug logs
+  console.log("Task data:", task);
+  console.log("Current user:", currentUser);
+  console.log("Task created by:", task.createdBy);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -48,41 +56,37 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     }
   }, [task.dueDate, currentTime]);
 
-  // Updated toggleComplete: check if date-only and send the proper values
-const toggleComplete = async (e) => {
-  e.stopPropagation();
-  try {
-    const token = localStorage.getItem("token");
+  const toggleComplete = async (e) => {
+    e.stopPropagation();
+    try {
+      const token = localStorage.getItem("token");
 
-    // For date-only tasks, format as "YYYY-MM-DD". Otherwise, send full ISO.
-    const updatedDueDate = task.dueDate
-      ? task.isDateOnly
-        ? moment(task.dueDate).format("YYYY-MM-DD")
-        : new Date(task.dueDate).toISOString()
-      : null;
+      const updatedDueDate = task.dueDate
+        ? task.isDateOnly
+          ? moment(task.dueDate).format("YYYY-MM-DD")
+          : new Date(task.dueDate).toISOString()
+        : null;
 
-    // Set fullDate flag: false if date-only, true otherwise.
-    const updatedFullDate = task.dueDate ? !task.isDateOnly : false;
+      const updatedFullDate = task.dueDate ? !task.isDateOnly : false;
 
-    await axios.put(
-      `http://localhost:5000/api/tasks/${task._id}`,
-      {
-        title: task.title,
-        description: task.description,
-        dueDate: updatedDueDate,
-        fullDate: updatedFullDate,
-        priority: task.priority,
-        attachments: task.attachments,
-        completed: !task.completed,
-      },
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    fetchTasks(currentPage);
-  } catch (error) {
-    console.error("Error toggling task:", error);
-  }
-};
-
+      await axios.put(
+        `http://localhost:5000/api/tasks/${task._id}`,
+        {
+          title: task.title,
+          description: task.description,
+          dueDate: updatedDueDate,
+          fullDate: updatedFullDate,
+          priority: task.priority,
+          attachments: task.attachments,
+          completed: !task.completed,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchTasks(currentPage);
+    } catch (error) {
+      console.error("Error toggling task:", error);
+    }
+  };
 
   const handleDelete = async (e) => {
     e.stopPropagation();
@@ -112,12 +116,21 @@ const toggleComplete = async (e) => {
 
   const formattedDueDate = formatDueDateDisplay(task);
 
+  // Create a popover that shows who created the task
+  const popover = (
+    <Popover id={`popover-${task._id}`}>
+      <Popover.Body>
+        {task.createdBy && 
+          (task.createdBy._id === currentUser._id ? "Created by you" : `Created by ${task.createdBy.name}`)
+        }
+      </Popover.Body>
+    </Popover>
+  );
+
   return (
-    <div
-      className={`card task-item ${task.completed ? "completed" : ""}`}
-      onClick={handleItemClick}
-    >
+    <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
       <div className="card-body p-2">
+        {/* Task Header */}
         <div className="task-item-header">
           <input
             type="checkbox"
@@ -175,7 +188,9 @@ const toggleComplete = async (e) => {
           </div>
         )}
 
+        {/* Task Footer */}
         <div className="task-item-footer">
+          {/* Due Date (Left) */}
           {formattedDueDate && (
             <div className="task-due-date">
               <FaRegCalendarAlt className="icon-date" />
@@ -183,11 +198,14 @@ const toggleComplete = async (e) => {
             </div>
           )}
 
+          {/* Priority (Left) */}
           {task.priority && (
             <div className={`task-priority ${task.priority.toLowerCase()}`}>
               <small>Priority: {task.priority}</small>
             </div>
           )}
+
+          {/* Attachments (Left) */}
           {task.attachments && task.attachments.length > 0 && (
             <div className="task-attachments">
               <FaPaperclip className="clip-icon" />
@@ -202,6 +220,17 @@ const toggleComplete = async (e) => {
                 Attachments ({task.attachments.length})
               </button>
             </div>
+          )}
+
+          {/* Creator Info with Left Popover */}
+          {task.createdBy && (
+            <OverlayTrigger trigger={['hover', 'focus']} placement="left" overlay={popover}>
+              <div className="task-created-by" style={{ marginLeft: 'auto', cursor: 'pointer' }}>
+                <small>
+                  {task.teamId && (task.createdBy._id === currentUser._id ? "You" : `Created by ${task.createdBy.name}`)}
+                </small>
+              </div>
+            </OverlayTrigger>
           )}
         </div>
       </div>

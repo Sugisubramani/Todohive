@@ -1,11 +1,10 @@
 // src/components/Dashboard/TaskForm.js
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
 import { FiTrash2 } from "react-icons/fi";
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
-import { TeamContext } from "../../context/TeamContext";
 import CustomReactDatetimePicker from "./CustomReactDatetimePicker";
 import moment from "moment";
 
@@ -167,8 +166,15 @@ const AttachmentInput = ({ value, onRename }) => {
   );
 };
 
-const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage, teamId }) => {
-  const { selectedTeam } = useContext(TeamContext);
+const TaskForm = ({ 
+  fetchTasks, 
+  taskToEdit, 
+  clearEdit, 
+  closeModal, 
+  currentPage, 
+  teamId,
+  onDeleteTask
+}) => {
   const [formData, setFormData] = useState({
     title: taskToEdit ? taskToEdit.title : "",
     description: taskToEdit ? taskToEdit.description : "",
@@ -273,26 +279,29 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage, 
     e.preventDefault();
     const data = new FormData();
 
-    const validDueDate =
-      formData.dueDate && moment(formData.dueDate, moment.ISO_8601, true).isValid()
-        ? formData.dueDate
-        : "";
-
+    // Add basic task data
     data.append("title", formData.title);
     data.append("description", formData.description);
-    if (validDueDate) {
-      data.append("dueDate", validDueDate);
+    if (formData.dueDate) {
+      data.append("dueDate", formData.dueDate);
     }
-    data.append("priority", formData.priority);
-
-    const teamIdToSend = teamId || (selectedTeam ? selectedTeam._id : null);
-    if (teamIdToSend) {
-      data.append("teamId", teamIdToSend);
+    if (formData.priority) {
+      data.append("priority", formData.priority);
     }
 
+    // Properly handle teamId
+    if (teamId) {
+      data.append("teamId", teamId);
+    } else {
+      data.append("personal", "true");
+    }
+
+    // Handle attachments
     if (attachments.length > 0) {
       attachments.forEach((item) => {
-        const renamedFile = new File([item.file], item.customName, { type: item.file.type });
+        const renamedFile = new File([item.file], item.customName, { 
+          type: item.file.type 
+        });
         data.append("attachments", renamedFile);
       });
     }
@@ -300,23 +309,24 @@ const TaskForm = ({ fetchTasks, taskToEdit, clearEdit, closeModal, currentPage, 
     const token = localStorage.getItem("token");
     try {
       if (taskToEdit) {
-        await axios.put(`http://localhost:5000/api/tasks/${taskToEdit._id}`, data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.put(
+          `http://localhost:5000/api/tasks/${taskToEdit._id}`, 
+          data,
+          { headers: { Authorization: `Bearer ${token}` }}
+        );
       } else {
-        await axios.post("http://localhost:5000/api/tasks", data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.post(
+          "http://localhost:5000/api/tasks", 
+          data,
+          { headers: { Authorization: `Bearer ${token}` }}
+        );
       }
       fetchTasks(currentPage);
       clearForm();
       if (closeModal) closeModal();
     } catch (error) {
       console.error("Error submitting task:", error);
-      alert(
-        error.response?.data?.message ||
-          "Task submission failed. Please try again."
-      );
+      alert(error.response?.data?.message || "Task submission failed. Please try again.");
     }
   };
 

@@ -47,16 +47,64 @@ exports.createTeam = async (req, res) => {
 
 exports.getTeams = async (req, res) => {
   try {
-    // Convert the logged-in user's email to lowercase for consistent matching.
     const userEmail = req.user.email.toLowerCase();
-    const teams = await Team.find({ members: userEmail });
-    res.json(teams);
+    // First, populate the admin field to get admin details
+    const teams = await Team.find({ members: userEmail }).populate('admin', 'id');
+    
+    // Add role information to each team
+    const teamsWithRoles = teams.map(team => ({
+      _id: team._id,
+      name: team.name,
+      members: team.members,
+      admin: team.admin,
+      role: team.admin._id.toString() === req.user.id ? "admin" : "member" // Fix: use _id instead of id
+    }));
+
+    console.log('Teams with roles:', teamsWithRoles); // Debug log
+    res.json(teamsWithRoles);
   } catch (error) {
     console.error("Error fetching teams:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
+exports.leaveTeam = async (req, res) => {
+  try {
+    const { teamId } = req.body;
+    if (!teamId) {
+      return res.status(400).json({ message: "Team ID is required" });
+    }
+    
+    // Ensure the user's email is normalized
+    const userEmail = req.user.email.toLowerCase();
+
+    // Find the team by ID
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    // Check if the user is actually a member of the team
+    if (!team.members.includes(userEmail)) {
+      return res.status(400).json({ message: "User is not a member of this team" });
+    }
+
+    // Remove the user from the team members array
+    team.members = team.members.filter((member) => member !== userEmail);
+
+    // Optionally, you might want to handle the situation where the leaving user is the admin.
+    // For example, you could either assign a new admin or restrict admins from leaving via this endpoint.
+    // if (team.admin === req.user.id) {
+    //   return res.status(400).json({ message: "Admin cannot leave the team. Please assign a new admin first." });
+    // }
+
+    await team.save();
+    res.status(200).json({ message: "Successfully left the team" });
+  } catch (error) {
+    console.error("Error leaving team:", error);
+    res.status(500).json({ message: "Server error while leaving team" });
+  }
+};
 
 exports.acceptInvitation = async (req, res) => {
   try {
@@ -66,33 +114,31 @@ exports.acceptInvitation = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Normalize the email to lowercase and trim it.
     const emailFromToken = decoded.email.toLowerCase().trim();
     const teamId = decoded.teamId;
 
     const team = await Team.findById(teamId);
     if (!team) return res.status(404).json({ message: "Team not found." });
 
-    // Normalize pendingInvites entries for comparison.
     const normalizedInvites = team.pendingInvites.map((e) => e.toLowerCase().trim());
 
     if (!normalizedInvites.includes(emailFromToken)) {
       return res.status(400).json({ message: "Invitation not found or already accepted" });
     }
 
-    // Remove the invitation. (Use filter on normalized emails but remove the original string.)
+    // Remove the invitation and add the user to the team
     team.pendingInvites = team.pendingInvites.filter(
       (e) => e.toLowerCase().trim() !== emailFromToken
     );
 
-    // Also, normalize members before adding.
     const normalizedMembers = team.members.map((e) => e.toLowerCase().trim());
     if (!normalizedMembers.includes(emailFromToken)) {
       team.members.push(emailFromToken);
     }
     await team.save();
 
-    res.redirect(`${process.env.APP_URL}/team/${team.name}?invited=true`);
+    // Redirect to the Personal Dashboard with the joined team name
+    res.redirect(`${process.env.APP_URL}/dashboard?joinedTeam=${team.name}`);
   } catch (error) {
     console.error("Error accepting invitation:", error);
     res.status(400).json({ message: "Invalid or expired token" });

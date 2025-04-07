@@ -1,15 +1,17 @@
+// taskController.js
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 const Task = require("../models/Task");
 const moment = require("moment");
+const jwt = require("jsonwebtoken");
 
 function getCurrentLocalDateString() {
   return moment().format("YYYY-MM-DD");
 }
 
-// Updated renameAttachment function:
-async function renameAttachment(req, res) {
+// Rename Attachment
+exports.renameAttachment = async (req, res) => {
   const { id } = req.params; // Task ID
   let { originalPath, newFileName } = req.body;
 
@@ -22,11 +24,12 @@ async function renameAttachment(req, res) {
   const baseName = path.basename(newFileName, path.extname(newFileName));
 
   if (!baseName) {
-    return res.status(400).json({ message: "New file name must have characters before the extension" });
+    return res
+      .status(400)
+      .json({ message: "New file name must have characters before the extension" });
   }
 
   const finalFileName = baseName + originalExt;
-
   const uploadsDir = path.join(__dirname, "../uploads");
   const oldFilePath = path.join(uploadsDir, path.basename(originalPath));
   const newFilePath = path.join(uploadsDir, finalFileName);
@@ -43,8 +46,8 @@ async function renameAttachment(req, res) {
       {
         $set: {
           "attachments.$.path": `/uploads/${finalFileName}`,
-          "attachments.$.displayName": finalFileName
-        }
+          "attachments.$.displayName": finalFileName,
+        },
       },
       { new: true }
     );
@@ -53,21 +56,37 @@ async function renameAttachment(req, res) {
       return res.status(404).json({ message: "Attachment not found in task" });
     }
 
+    // Emit update event after renaming attachment
+    const io = req.app.get("io");
+    if (updatedTask.teamId) {
+      io.to(updatedTask.teamId.toString()).emit("taskUpdated", updatedTask);
+    } else {
+      io.to("personal").emit("taskUpdated", updatedTask);
+    }
+
     res.status(200).json({ message: "Attachment renamed", task: updatedTask });
   } catch (error) {
     console.error("Error renaming attachment:", error);
     res.status(500).json({ message: "Error renaming attachment" });
   }
-}
-exports.renameAttachment = renameAttachment;
+};
 
+// Create Task
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, dueDate, priority } = req.body;
+    const { title, description, dueDate, priority, teamId, personal } = req.body;
 
+    if (!title || typeof title !== "string") {
+      return res.status(400).json({ 
+        message: "Title is required and must be a string." 
+      });
+    }
+
+    // Handle due date formatting
     let finalDueDate = null;
     let isDateOnly = false;
     let localDueDate = null;
+
     if (dueDate) {
       const mDueDate = moment(dueDate, "YYYY-MM-DD", true);
       if (mDueDate.isValid()) {
@@ -79,16 +98,18 @@ exports.createTask = async (req, res) => {
       }
     }
 
+    // Handle attachments
     const attachments = req.files
       ? req.files.map((file) => ({
-        path: `/uploads/${file.filename}`,
-        displayName: file.originalname,
-      }))
+          path: `/uploads/${file.filename}`,
+          displayName: file.originalname,
+        }))
       : [];
 
-    // NEW: We add teamId if provided.
+    // Create task object
     const task = new Task({
       user: req.user.id,
+      createdBy: req.user.id,
       title,
       description,
       dueDate: finalDueDate,
@@ -96,10 +117,19 @@ exports.createTask = async (req, res) => {
       priority,
       attachments,
       isDateOnly,
-      teamId: req.body.teamId ? req.body.teamId : null,
+      teamId: personal === "true" ? null : teamId || null
     });
 
     await task.save();
+
+    // Emit socket event
+    const io = req.app.get("io");
+    if (task.teamId) {
+      io.to(task.teamId.toString()).emit("taskAdded", task);
+    } else {
+      io.to("personal").emit("taskAdded", task);
+    }
+
     res.status(201).json(task);
   } catch (err) {
     console.error("Error creating task:", err);
@@ -107,19 +137,31 @@ exports.createTask = async (req, res) => {
   }
 };
 
+// Get Tasks
 exports.getTasks = async (req, res) => {
   try {
-    const { page = 1, priority, search, status, teamId } = req.query;
+    const { page = 1, priority, status, teamId, personal } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
 
-    // If teamId is provided, we'll filter by it. Otherwise, we're in personal mode.
-    // In personal mode, return only tasks where teamId is null or does not exist.
-    const queryObj = teamId
-      ? { teamId }
-      : { user: req.user.id, $or: [{ teamId: null }, { teamId: { $exists: false } }] };
+    // Build the query object
+    let queryObj = {};
 
-    if (priority && priority !== "Priority") {
+    // Handle team vs personal mode
+    if (personal === 'true') {
+      queryObj = { 
+        user: req.user.id,
+        $or: [
+          { teamId: null },
+          { teamId: { $exists: false } }
+        ]
+      };
+    } else if (teamId) {
+      queryObj = { teamId };
+    }
+
+    // Add priority filter
+    if (priority && priority !== "All") {
       if (priority.includes(",")) {
         const priorities = priority.split(",").map((p) => p.trim());
         queryObj.priority = { $in: priorities };
@@ -128,65 +170,74 @@ exports.getTasks = async (req, res) => {
       }
     }
 
+    // Add status filter
     if (status && status !== "All") {
-      let statusArr = [];
-      if (typeof status === "string") {
-        statusArr = status.includes(",")
-          ? status.split(",").map((s) => s.trim())
-          : [status];
-      } else if (Array.isArray(status)) {
-        statusArr = status;
-      }
       const now = new Date();
-      const currentLocalDate = getCurrentLocalDateString();
-
-      const statusConditions = statusArr.map((s) => {
-        if (s === "Completed") {
-          return { completed: true };
-        } else if (s === "Active") {
-          return {
-            completed: false,
-            $or: [
-              { dueDate: null },
-              { isDateOnly: false, dueDate: { $gt: now } },
-              { isDateOnly: true, localDueDate: { $gte: currentLocalDate } },
-            ],
-          };
-        } else if (s === "Pending") {
-          return {
-            completed: false,
-            $or: [
-              { isDateOnly: false, dueDate: { $lte: now } },
-              { isDateOnly: true, localDueDate: { $lt: currentLocalDate } },
-            ],
-          };
-        }
-      }).filter(Boolean);
+      const currentLocalDate = moment().format("YYYY-MM-DD");
+      const statusArr = status.includes(",") ? status.split(",").map(s => s.trim()) : [status];
+      
+      const statusConditions = [];
+      
+      if (statusArr.includes("Completed")) {
+        statusConditions.push({ completed: true });
+      }
+      if (statusArr.includes("Active")) {
+        statusConditions.push({
+          completed: false,
+          $or: [
+            { dueDate: null },
+            { isDateOnly: false, dueDate: { $gt: now } },
+            { isDateOnly: true, localDueDate: { $gte: currentLocalDate } }
+          ]
+        });
+      }
+      if (statusArr.includes("Pending")) {
+        statusConditions.push({
+          completed: false,
+          $or: [
+            { isDateOnly: false, dueDate: { $lte: now } },
+            { isDateOnly: true, localDueDate: { $lt: currentLocalDate } }
+          ]
+        });
+      }
 
       if (statusConditions.length > 0) {
-        queryObj.$or = statusConditions;
+        queryObj.$and = [
+          { ...queryObj },
+          { $or: statusConditions }
+        ];
       }
     }
 
-    if (search) {
-      const exactRegex = new RegExp(`^${search}$`, "i");
-      const exactCount = await Task.countDocuments({ ...queryObj, title: exactRegex });
-      queryObj.title = exactCount > 0 ? exactRegex : new RegExp(search, "i");
-    }
-
-    const tasks = await Task.find(queryObj)
+    // Query tasks
+    let tasksQuery = Task.find(queryObj)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Only populate user details for team tasks
+    if (!personal) {
+      tasksQuery = tasksQuery
+        .populate('createdBy', 'name')
+        .populate('user', 'name');
+    }
+
+    const tasks = await tasksQuery;
     const total = await Task.countDocuments(queryObj);
-    res.json({ tasks, total, page, pages: Math.ceil(total / limit) });
+
+    res.json({
+      tasks,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit)
+    });
   } catch (err) {
     console.error("Error getting tasks:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-
+// Update Task
 exports.updateTask = async (req, res) => {
   try {
     let task = await Task.findById(req.params.id);
@@ -232,8 +283,10 @@ exports.updateTask = async (req, res) => {
       }
     }
 
-    task.attachments = task.attachments.filter(att => !originalsToRemove.includes(att.path));
-    const newAttachments = req.files ? req.files.map(file => ({ path: `/uploads/${file.filename}`, displayName: file.originalname })) : [];
+    task.attachments = task.attachments.filter((att) => !originalsToRemove.includes(att.path));
+    const newAttachments = req.files
+      ? req.files.map((file) => ({ path: `/uploads/${file.filename}`, displayName: file.originalname }))
+      : [];
 
     if (req.body.title !== undefined) task.title = req.body.title;
     if (req.body.description !== undefined) task.description = req.body.description;
@@ -247,30 +300,23 @@ exports.updateTask = async (req, res) => {
       let updatedDate = null;
       let updatedIsDateOnly = false;
       let updatedLocalDueDate = null;
-
-      // In updateTask...
       if (
         (req.body.fullDate && (req.body.fullDate === "true" || req.body.fullDate === true)) ||
         req.body.dueDate.includes("T")
       ) {
-        // full date/time branch here
         updatedDate = new Date(req.body.dueDate);
         updatedIsDateOnly = false;
         updatedLocalDueDate = null;
       } else {
-        // Date-only branch
         const mDueDate = moment(req.body.dueDate, "YYYY-MM-DD", true);
         if (mDueDate.isValid()) {
           updatedIsDateOnly = true;
           updatedLocalDueDate = mDueDate.format("YYYY-MM-DD");
-          // Here we still save the Date as the end of day for comparisons.
           updatedDate = mDueDate.endOf("day").toDate();
         } else {
           updatedDate = new Date(req.body.dueDate);
         }
       }
-
-
       task.dueDate = updatedDate;
       task.isDateOnly = updatedIsDateOnly;
       task.localDueDate = updatedLocalDueDate;
@@ -280,7 +326,17 @@ exports.updateTask = async (req, res) => {
     if (req.body.completed !== undefined) task.completed = req.body.completed;
 
     task.attachments = [...task.attachments, ...renamedAttachments, ...newAttachments];
+
     await task.save();
+
+    // Emit update event after task modification
+    const io = req.app.get("io");
+    if (task.teamId) {
+      io.to(task.teamId.toString()).emit("taskUpdated", task);
+    } else {
+      io.to("personal").emit("taskUpdated", task);
+    }
+
     res.json(task);
   } catch (err) {
     console.error("Error updating task:", err);
@@ -288,31 +344,40 @@ exports.updateTask = async (req, res) => {
   }
 };
 
-
+// Delete Attachment
 exports.deleteAttachment = async (req, res) => {
   try {
     const { filePath } = req.body;
     const taskId = req.params.id;
     const task = await Task.findById(taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
-    task.attachments = task.attachments.map((att) => {
-      if (typeof att === "string") {
-        return { path: att, displayName: path.basename(att) };
-      }
-      return att;
-    });
+
+    task.attachments = task.attachments.map((att) =>
+      typeof att === "string" ? { path: att, displayName: path.basename(att) } : att
+    );
+
     const index = task.attachments.findIndex((att) => att.path === filePath);
     if (index === -1) {
       return res.status(404).json({ message: "Attachment not found in task" });
     }
     task.attachments.splice(index, 1);
     await task.save();
+
     const fullPath = path.resolve(__dirname, "..", filePath);
     if (fs.existsSync(fullPath)) {
       fs.unlinkSync(fullPath);
     } else {
       console.warn("File not found on disk:", fullPath);
     }
+
+    // Emit event after attachment deletion
+    const io = req.app.get("io");
+    if (task.teamId) {
+      io.to(task.teamId.toString()).emit("taskUpdated", task);
+    } else {
+      io.to("personal").emit("taskUpdated", task);
+    }
+
     res.json({ message: "Attachment deleted successfully." });
   } catch (error) {
     console.error("Error deleting attachment:", error);
@@ -320,12 +385,14 @@ exports.deleteAttachment = async (req, res) => {
   }
 };
 
+// Delete Task
 exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
+
     task.attachments.forEach((att) => {
-      let filePath = typeof att === "string" ? att : att.path;
+      const filePath = typeof att === "string" ? att : att.path;
       const fullPath = path.resolve(__dirname, "..", filePath);
       if (fs.existsSync(fullPath)) {
         fs.unlink(fullPath, (err) => {
@@ -333,7 +400,17 @@ exports.deleteTask = async (req, res) => {
         });
       }
     });
+
     await Task.findByIdAndDelete(req.params.id);
+
+    // Emit event after task deletion
+    const io = req.app.get("io");
+    if (task.teamId) {
+      io.to(task.teamId.toString()).emit("taskDeleted", req.params.id);
+    } else {
+      io.to("personal").emit("taskDeleted", req.params.id);
+    }
+
     res.json({ message: "Task deleted successfully." });
   } catch (error) {
     console.error("Error deleting task:", error);
@@ -341,64 +418,87 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
+// Clear Tasks
 exports.clearTasks = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
       throw new Error("User not authenticated properly");
     }
-    console.log("Clearing tasks for user:", req.user.id);
-    const userId = new mongoose.Types.ObjectId(req.user.id);
-    // NEW: Check if a teamId query parameter exists. If so, clear tasks for that team.
-    const { teamId, priority, status } = req.query;
-    const queryObj = teamId ? { teamId } : { user: userId };
-
+    const userId = req.user.id;
+    let { teamId, priority, status } = req.query;
+    
+    if (teamId === "null" || teamId === undefined) {
+      teamId = null;
+    }
+    
+    let queryObj = {};
+    if (teamId) {
+      queryObj = { teamId: teamId, user: userId };
+    } else {
+      queryObj = {
+        user: userId,
+        $or: [{ teamId: null }, { teamId: { $exists: false } }],
+      };
+    }
+    
     if (priority && priority !== "All") {
       if (priority.includes(",")) {
-        const priorities = priority.split(",").map(p => p.trim());
+        const priorities = priority.split(",").map((p) => p.trim());
         queryObj.priority = { $in: priorities };
       } else {
         queryObj.priority = priority;
       }
     }
+    
     if (status && status !== "All") {
       let statusArr = [];
       if (typeof status === "string") {
-        statusArr = status.includes(",") ? status.split(",").map(s => s.trim()) : [status];
+        statusArr = status.includes(",") ? status.split(",").map((s) => s.trim()) : [status];
       } else if (Array.isArray(status)) {
         statusArr = status;
       }
       const now = new Date();
       const currentLocalDate = getCurrentLocalDateString();
-      const statusConditions = statusArr.map(s => {
-        if (s === "Completed") {
-          return { completed: true };
-        } else if (s === "Active") {
-          return {
-            completed: false,
-            $or: [
-              { dueDate: null },
-              { isDateOnly: false, dueDate: { $gt: now } },
-              { isDateOnly: true, localDueDate: { $gte: currentLocalDate } }
-            ]
-          };
-        } else if (s === "Pending") {
-          return {
-            completed: false,
-            $or: [
-              { isDateOnly: false, dueDate: { $lte: now } },
-              { isDateOnly: true, localDueDate: { $lt: currentLocalDate } }
-            ]
-          };
-        }
-      }).filter(Boolean);
-
+      const statusConditions = statusArr
+        .map((s) => {
+          if (s === "Completed") {
+            return { completed: true };
+          } else if (s === "Active") {
+            return {
+              completed: false,
+              $or: [
+                { dueDate: null },
+                { isDateOnly: false, dueDate: { $gt: now } },
+                { isDateOnly: true, localDueDate: { $gte: currentLocalDate } },
+              ],
+            };
+          } else if (s === "Pending") {
+            return {
+              completed: false,
+              $or: [
+                { isDateOnly: false, dueDate: { $lte: now } },
+                { isDateOnly: true, localDueDate: { $lt: currentLocalDate } },
+              ],
+            };
+          }
+        })
+        .filter(Boolean);
       if (statusConditions.length > 0) {
         queryObj.$or = statusConditions;
       }
     }
-
+    
     console.log("Deleting tasks with query:", queryObj);
     await Task.deleteMany(queryObj);
+    
+    // Emit event after clearing tasks
+    const io = req.app.get("io");
+    if (teamId) {
+      io.to(teamId.toString()).emit("tasksCleared");
+    } else {
+      io.to("personal").emit("tasksCleared");
+    }
+    
     res.json({ message: "Filtered tasks cleared" });
   } catch (err) {
     console.error("Error in clearTasks:", err);

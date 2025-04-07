@@ -1,28 +1,27 @@
-// src/pages/DashboardPage.js
-import React, {
-  useState,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-  useRef,
-  useContext
-} from "react";
+import React, { useState, useEffect, useCallback, useRef, useContext } from "react";
 import axios from "axios";
 import TaskList from "../components/Dashboard/TaskList";
 import Sidebar from "../components/Dashboard/Sidebar";
-import { Modal, Button } from "react-bootstrap";
+import { Modal, Button, Dropdown, Toast } from "react-bootstrap";
 import { FiTrash2, FiSearch } from "react-icons/fi";
 import { CgMoreVertical } from "react-icons/cg";
 import { VscClearAll } from "react-icons/vsc";
 import { MdBuild } from "react-icons/md";
+import { RiArrowDownSLine, RiTeamFill } from "react-icons/ri";
 import TaskForm from "../components/Dashboard/TaskForm";
 import { TeamContext } from "../context/TeamContext";
+import { useNavigate } from "react-router-dom";
+import "react-toastify/dist/ReactToastify.css";
 import "../styles/Dashboard.css";
+import { io } from "socket.io-client";
 
 const DashboardPage = ({ teamName }) => {
   const { selectedTeam, setSelectedTeam } = useContext(TeamContext);
+  const navigate = useNavigate();
+
+  // Component states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [filters, setFilters] = useState({ priority: ["All"], status: "All" });
+  const [filters, setFilters] = useState({ priority: ["All"], status: ["All"] });
   const [searchText, setSearchText] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editTask, setEditTask] = useState(null);
@@ -31,9 +30,17 @@ const DashboardPage = ({ teamName }) => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const moreMenuRef = useRef(null);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
 
-  const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
+  // Toast state for notifications
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+
+  // Refs
+  const moreMenuRef = useRef(null);
+  const socketRef = useRef(null);
+  const prevTasksCountRef = useRef(tasks.length);
+  const currentPageRef = useRef(page);
 
   const isAllSelected = (filterArray) =>
     filterArray.includes("All") || filterArray.length === 0;
@@ -42,68 +49,149 @@ const DashboardPage = ({ teamName }) => {
     async (currentPage = 1) => {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("Please log in first.");
+        navigate("/auth/login");
         return;
       }
       try {
         let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
+
+        // Handle team vs personal mode
         if (selectedTeam) {
           url += `&teamId=${selectedTeam._id}`;
+        } else {
+          // Add explicit personal mode filter
+          url += `&personal=true&teamId=null`;
         }
+
+        // Add priority filter
         if (!isAllSelected(filters.priority)) {
           url += `&priority=${filters.priority.join(",")}`;
         }
-        if (filters.status !== "All") {
-          url += `&status=${filters.status}`;
+
+        // Add status filter
+        if (!isAllSelected(filters.status)) {
+          url += `&status=${filters.status.join(",")}`;
         }
+
+        // Add search filter
         if (searchText.trim()) {
           url += `&search=${encodeURIComponent(searchText.trim())}`;
         }
-        console.log("Fetching tasks from URL:", url);
+
         const res = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("API Response:", res.data);
+
         if (res.data && typeof res.data === "object") {
-          setTasks(
-            res.data.tasks.sort(
-              (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-            )
+          const fetchedTasks = res.data.tasks.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
           );
+          setTasks(fetchedTasks);
           setPages(res.data.pages);
-          setPage(Number(res.data.page)); // Ensure page is a number
-        } else {
-          console.error("Unexpected API response format:", res.data);
+          setPage(Number(res.data.page));
         }
       } catch (error) {
         console.error("Error fetching tasks:", error);
       }
     },
-    [selectedTeam, filters, searchText]
+    [selectedTeam, filters, searchText, navigate]
   );
 
-  // If no team name is provided, clear the selected team.
-  useLayoutEffect(() => {
+  useEffect(() => {
+    setPage(1);
+    fetchTasks(1);
+  }, [teamName, fetchTasks]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+    socketRef.current = io("http://localhost:5000", {
+      query: { token },
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [selectedTeam]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    // Leave previous room if exists
+    if (selectedTeam?.previousTeamId) {
+      socket.emit("leaveTeamRoom", selectedTeam.previousTeamId);
+    }
+
+    // Join appropriate room
+    if (selectedTeam) {
+      console.log("Joining team room:", selectedTeam._id);
+      socket.emit("joinTeamRoom", selectedTeam._id);
+    } else {
+      console.log("Joining personal room");
+      // Get user ID from localStorage instead of req
+      const user = JSON.parse(localStorage.getItem("user"));
+      socket.emit("joinPersonalRoom", user._id);
+    }
+
+    const handleTaskChange = () => {
+      console.log("Socket event received, fetching tasks...");
+      fetchTasks(currentPageRef.current);
+    };
+
+    // Listen to events
+    socket.on("taskAdded", handleTaskChange);
+    socket.on("taskUpdated", handleTaskChange);
+    socket.on("taskDeleted", handleTaskChange);
+    socket.on("tasksCleared", handleTaskChange);
+
+    return () => {
+      socket.off("taskAdded", handleTaskChange);
+      socket.off("taskUpdated", handleTaskChange);
+      socket.off("taskDeleted", handleTaskChange);
+      socket.off("tasksCleared", handleTaskChange);
+    };
+  }, [selectedTeam, fetchTasks]);
+
+  useEffect(() => {
     if (!teamName) {
       setSelectedTeam(null);
-      localStorage.removeItem("selectedTeam");
     }
   }, [teamName, setSelectedTeam]);
 
-  // Fetch tasks only when selectedTeam, filters, or searchText change.
   useEffect(() => {
-    fetchTasks(1);
-    // We intentionally omit fetchTasks from the dependency array
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTeam, filters, searchText]);
+    if (selectedTeam) {
+      console.log("Selected team:", selectedTeam.name);
+    }
+  }, [selectedTeam]);
 
-  // Update current time every minute.
+  useEffect(() => {
+    fetchTasks(page);
+  }, [selectedTeam, filters, searchText, page, fetchTasks]);
+
+  useEffect(() => {
+    if (prevTasksCountRef.current > 0 && tasks.length === 0 && page > 1) {
+      setPage((prev) => prev - 1);
+    }
+    prevTasksCountRef.current = tasks.length;
+  }, [tasks, page]);
+
   useEffect(() => {
     const intervalId = setInterval(() => setCurrentTime(Date.now()), 60000);
     return () => clearInterval(intervalId);
   }, []);
 
-  // Close the "More" menu when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
@@ -114,23 +202,39 @@ const DashboardPage = ({ teamName }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // When a team name is provided, update the selected team only if it has really changed.
   useEffect(() => {
-    if (teamName) {
-      const storedTeams = JSON.parse(localStorage.getItem("teams")) || [];
-      const matchingTeam = storedTeams.find((team) => team.name === teamName);
-      if (
-        matchingTeam &&
-        (!selectedTeam || matchingTeam._id !== selectedTeam._id)
-      ) {
-        setSelectedTeam(matchingTeam);
-      }
-    }
-  }, [teamName, selectedTeam, setSelectedTeam]);
+    currentPageRef.current = page;
+  }, [page]);
 
-  const openAddTaskModal = () => {
+  // Show a Bootstrap Toast whenever the selectedTeam changes.
+  useEffect(() => {
+    const currentTeam = selectedTeam?.name || "Personal";
+    setToastMessage(`Now viewing ${currentTeam} Dashboard`);
+    setShowToast(true);
+  }, [selectedTeam]);
+
+  const handleLeaveTeam = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:5000/api/teams/leaveTeam",
+        { teamId: selectedTeam._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSelectedTeam(null);
+      navigate("/dashboard");
+      fetchTasks(1);
+      setShowLeaveModal(false);
+    } catch (error) {
+      console.error("Error leaving team:", error);
+      alert("Failed to leave team. Please try again.");
+    }
+  };
+
+  const openAddTaskModal = () => setShowModal(true);
+  const closeModal = () => {
+    setShowModal(false);
     setEditTask(null);
-    setShowModal(true);
   };
 
   const openEditTaskModal = (task) => {
@@ -138,17 +242,16 @@ const DashboardPage = ({ teamName }) => {
     setShowModal(true);
   };
 
-  const closeModal = () => setShowModal(false);
+  const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
 
-  const handleDeleteTask = async () => {
-    if (!editTask) return;
+  const handleDeleteTask = async (taskId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/tasks/${editTask._id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      fetchTasks(page);
       closeModal();
-      setEditTask(null);
+      fetchTasks(page);
     } catch (error) {
       console.error("Error deleting task:", error);
       alert("Failed to delete task. Please try again.");
@@ -157,156 +260,237 @@ const DashboardPage = ({ teamName }) => {
 
   const clearAllTasks = async () => {
     try {
-      let url = `http://localhost:5000/api/tasks/clear`;
-      const queryParams = [];
-      if (!isAllSelected(filters.priority)) {
-        queryParams.push(`priority=${filters.priority.join(",")}`);
+      const token = localStorage.getItem("token");
+      let url = "http://localhost:5000/api/tasks/clear";
+      if (selectedTeam) {
+        url += `?teamId=${selectedTeam._id}`;
       }
-      if (filters.status !== "All") {
-        queryParams.push(`status=${filters.status}`);
-      }
-      if (queryParams.length > 0) {
-        url += "?" + queryParams.join("&");
-      }
-      console.log("Clearing tasks with URL:", url);
       await axios.delete(url, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       fetchTasks(page);
-      setShowMenu(false);
     } catch (error) {
       console.error("Error clearing tasks:", error);
-      alert("Failed to clear tasks.");
     }
   };
 
   return (
-    <div className="d-flex dashboard-container">
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        toggleSidebar={toggleSidebar}
-        onFilterChange={setFilters}
-        openAddTaskModal={openAddTaskModal}
-        onTeamSelect={setSelectedTeam}
-      />
+    <>
+      {/* React-Bootstrap Toast for notifications */}
+      <Toast
+        onClose={() => setShowToast(false)}
+        show={showToast}
+        delay={1500}
+        autohide
+        className="dashboard-toast"
+        style={{
+          position: "fixed",
+          top: "1rem",
+          right: "1rem",
+          zIndex: 9999,
+          width: "300px",
+        }}
+      >
+        <Toast.Body style={{ backgroundColor: "#56565", color: "#fff", padding: "0.55rem 1zrem" }}>
+          {toastMessage}
+        </Toast.Body>
+      </Toast>
 
-      <div className="flex-grow-1 p-3 main-content">
-        <div
-          className="header-area"
-          style={{ position: "relative", textAlign: "center" }}
-        >
-          <a
-            href="#!"
-            className="main-add-task text-decoration-none"
-            onClick={openAddTaskModal}
+      <div className="d-flex dashboard-container">
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          toggleSidebar={toggleSidebar}
+          onFilterChange={setFilters}
+          openAddTaskModal={openAddTaskModal}
+          onTeamSelect={setSelectedTeam}
+        />
+        <div className="flex-grow-1 p-3 main-content">
+          <div
+            className="header-area"
+            style={{ position: "relative", textAlign: "center" }}
           >
-            + Add Task
-          </a>
-          <div style={{ position: "absolute", top: "-18px", right: "1px" }}>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <span
-                className="customize-label"
-                onClick={() => setShowMenu(!showMenu)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  fontWeight: "bold",
-                  fontSize: "1rem",
-                  cursor: "pointer"
-                }}
-              >
-                <CgMoreVertical size={20} style={{ marginRight: "4px" }} />
-                More
-              </span>
-              {showMenu && (
-                <div
-                  ref={moreMenuRef}
-                  className="custom-dropdown show"
+            {selectedTeam && (
+              <Dropdown style={{ position: "absolute", top: "-7px", left: "1px" }}>
+                <Dropdown.Toggle variant="light" id="team-dropdown" className="team-dropdown">
+                  <span
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "1.2rem",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    <RiTeamFill
+                      style={{
+                        marginRight: "-2px",
+                        color: "#007bff",
+                        verticalAlign: "text-top",
+                        position: "relative",
+                        top: "3px",
+                      }}
+                    />{" "}
+                    {selectedTeam.name}
+                  </span>{" "}
+                  <RiArrowDownSLine size={16} style={{ marginLeft: "4px", verticalAlign: "middle" }} />
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setShowLeaveModal(true)}>
+                    Leave Team
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            )}
+            <a
+              href="#!"
+              className="main-add-task text-decoration-none"
+              onClick={openAddTaskModal}
+            >
+              + Add Task
+            </a>
+            <div style={{ position: "absolute", top: "-18px", right: "1px" }}>
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <span
+                  className="customize-label"
+                  onClick={() => setShowMenu(!showMenu)}
                   style={{
-                    position: "absolute",
-                    top: "calc(100% + 40px)",
-                    right: "0",
-                    left: "auto"
+                    display: "flex",
+                    alignItems: "center",
+                    fontWeight: "bold",
+                    fontSize: "1rem",
+                    cursor: "pointer",
                   }}
                 >
-                  <button className="dropdown-item" onClick={clearAllTasks}>
-                    <VscClearAll style={{ marginRight: "8px" }} />
-                    Clear Task
-                  </button>
-                  <div className="dropdown-divider" />
-                  <button className="dropdown-item">
-                    <MdBuild style={{ marginRight: "8px" }} />
-                    More
-                  </button>
-                </div>
-              )}
+                  <CgMoreVertical size={20} style={{ marginRight: "4px" }} />
+                  More
+                </span>
+                {showMenu && (
+                  <div
+                    ref={moreMenuRef}
+                    className="custom-dropdown show"
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 40px)",
+                      right: "0",
+                      left: "auto",
+                    }}
+                  >
+                    <button className="dropdown-item" onClick={clearAllTasks}>
+                      <VscClearAll style={{ marginRight: "8px" }} />
+                      Clear Tasks
+                    </button>
+                    <div className="dropdown-divider" />
+                    <button className="dropdown-item">
+                      <MdBuild style={{ marginRight: "8px" }} />
+                      Settings
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="search-bar text-center mb-1">
-          <div className="search-input-container">
-            <FiSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="search-input"
-            />
+          <div className="search-bar text-center mb-1">
+            <div className="search-input-container">
+              <FiSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
+          <div className="task-list-container">
+            {tasks.length > 0 ? (
+              <TaskList
+                tasks={tasks}
+                fetchTasks={fetchTasks}
+                openEditTaskModal={openEditTaskModal}
+                pages={pages}
+                page={page}
+                currentTime={currentTime}
+              />
+            ) : (
+              <div className="no-tasks-message">
+                {searchText
+                  ? `No tasks found for "${searchText}"`
+                  : "No tasks found."}
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="task-list-container">
-          {tasks.length > 0 ? (
-            <TaskList
-              tasks={tasks}
+        <Modal show={showModal} onHide={closeModal} centered>
+          <Modal.Header className="d-flex justify-content-between align-items-center">
+            <Modal.Title>{editTask ? "Edit Task" : "Add Task"}</Modal.Title>
+            {editTask && (
+              <Button
+                variant="link"
+                onClick={() => handleDeleteTask(editTask._id)}
+                className="header-trash-btn"
+                style={{
+                  border: "none",
+                  textDecoration: "none",
+                  color: "#dc3545",
+                }}
+              >
+                <FiTrash2 size={20} />
+              </Button>
+            )}
+          </Modal.Header>
+          <Modal.Body>
+            <TaskForm
               fetchTasks={fetchTasks}
-              openEditTaskModal={openEditTaskModal}
-              pages={pages}
-              page={page}
-              currentTime={currentTime}
+              taskToEdit={editTask}
+              clearEdit={() => setEditTask(null)}
+              closeModal={closeModal}
+              currentPage={page}
+              teamId={selectedTeam ? selectedTeam._id : null}
+              onDeleteTask={handleDeleteTask}
             />
-          ) : (
-            <div className="no-tasks-message">
-              {searchText
-                ? `No tasks found for "${searchText}"`
-                : "No tasks found."}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Modal show={showModal} onHide={closeModal} centered>
-        <Modal.Header className="d-flex justify-content-between align-items-center">
-          <Modal.Title>{editTask ? "Edit Task" : "Add Task"}</Modal.Title>
-          {editTask && (
-            <Button
-              variant="link"
-              onClick={handleDeleteTask}
-              className="header-trash-btn"
+          </Modal.Body>
+        </Modal>
+        <Modal
+          show={showLeaveModal}
+          onHide={() => setShowLeaveModal(false)}
+          centered
+          size="md"
+        >
+          <Modal.Header>
+            <Modal.Title className="text-center w-100">Leave Team</Modal.Title>
+          </Modal.Header>
+          <Modal.Body className="text-center">
+            <p>
+              Are you sure you want to leave the team <strong>{selectedTeam?.name}</strong>?
+            </p>
+            <p className="text-danger">This action cannot be undone.</p>
+          </Modal.Body>
+          <Modal.Footer className="d-flex justify-content-end">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowLeaveModal(false)}
               style={{
-                border: "none",
-                textDecoration: "none",
-                color: "#dc3545"
+                minWidth: "80px",
+                fontSize: "0.9rem",
+                padding: "6px 12px",
               }}
             >
-              <FiTrash2 size={20} />
-            </Button>
-          )}
-        </Modal.Header>
-        <Modal.Body>
-          <TaskForm
-            fetchTasks={fetchTasks}
-            taskToEdit={editTask}
-            clearEdit={() => setEditTask(null)}
-            closeModal={closeModal}
-            currentPage={page}
-            teamId={selectedTeam ? selectedTeam._id : null}
-          />
-        </Modal.Body>
-      </Modal>
-    </div>
+              Cancel
+            </button>
+            <button
+              className="btn btn-outline-danger btn-sm"
+              onClick={handleLeaveTeam}
+              style={{
+                minWidth: "80px",
+                fontSize: "0.9rem",
+                padding: "6px 12px",
+                marginLeft: "10px",
+              }}
+            >
+              Leave
+            </button>
+          </Modal.Footer>
+        </Modal>
+      </div>
+    </>
   );
 };
 

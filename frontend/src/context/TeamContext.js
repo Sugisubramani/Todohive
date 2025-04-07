@@ -1,4 +1,3 @@
-// src/context/TeamContext.js
 import React, { createContext, useState } from 'react';
 
 export const TeamContext = createContext();

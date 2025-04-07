@@ -164,18 +164,19 @@
 }
 
 .sidebar-dropdown-control {
-  height: 35px;
-  min-height: 35px;
-  padding: 5px 10px;
+  height: 38px !important; /* Match Add Task/Team button height */
+  min-height: 38px !important;
+  padding: 0.45rem 0.85rem !important; /* Match Add Task/Team button padding */
   position: relative;
-  border: 1px solid #ced4da;
-  border-radius: 0.34rem;
+  border: 1px solid #ced4da !important;
+  border-radius: 0.25rem !important;
   font-size: 0.9rem;
   font-family: inherit;
   background-color: #fff;
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  width: 100%;
 }
 
 .filter-text {
@@ -279,5 +280,54 @@
 
 .profile-dropdown .sidebar-text {
   font-size: 1.1rem;
-} 
+}
+
+.team-list {
+  list-style-type: none;
+  padding: 0;
+  margin-top: 0.5rem;
+}
+
+.team-item {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.team-item .role-icon {
+  margin-right: 8px;
+  font-size: 0.9rem;
+}
+
+.team-item .admin-icon {
+  color: #6c757d; /* Default grey color */
+}
+
+.team-item .member-icon {
+  color: #6c757d; /* Grey for members */
+}
+
+/* Selected state - higher specificity */
+.team-item.active-team {
+  background-color: #e7f1ff;
+  color: #0d6efd;
+}
+
+.team-item.active-team .admin-icon {
+  color: #ffd700 !important; /* Force gold color when selected */
+}
+
+.team-item.active-team .member-icon {
+  color: #0d6efd; /* Blue when selected */
+}
+
+/* Hover state - make sure it doesn't override active state */
+.team-item:not(.active-team):hover {
+  background-color: #f8f9fa;
+}
+
 
