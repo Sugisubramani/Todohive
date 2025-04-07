@@ -404,3 +404,19 @@
   color: #6c757d;
   margin-left: auto;
 }
+
+/* Custom Tooltip Styles */
+.custom-tooltip {
+  font-size: 0.75rem !important;
+  padding: 4px 8px !important;
+  opacity: 0.9 !important;
+}
+
+.custom-tooltip .tooltip-inner {
+  background-color: #495057 !important;
+  color: #fff !important;
+}
+
+.custom-tooltip .tooltip-arrow::before {
+  border-left-color: #495057 !important;
+}

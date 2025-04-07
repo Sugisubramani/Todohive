@@ -4,8 +4,7 @@ import { createPortal } from "react-dom";
 import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
 import moment from "moment";
 import AttachmentItem from "./AttachmentItem";
-import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
-import Popover from 'react-bootstrap/Popover';
+import { OverlayTrigger, Tooltip } from "react-bootstrap";
 import "../../styles/TaskItem.css";
 
 const formatDueDateDisplay = (task) => {
@@ -22,7 +21,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
-  const currentUser = JSON.parse(localStorage.getItem('user'));
+  const currentUser = JSON.parse(localStorage.getItem("user"));
 
   // Debug logs
   console.log("Task data:", task);
@@ -107,28 +106,24 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
       : false;
   const dueDatePassed = task.dueDate
     ? isDateOnly
-      ? moment().startOf("day").isAfter(moment(task.dueDate).local().startOf("day"))
+      ? moment()
+          .startOf("day")
+          .isAfter(moment(task.dueDate).local().startOf("day"))
       : moment().isAfter(moment(task.dueDate).local())
     : false;
   const statusLabel = task.completed
     ? "Completed"
-    : (!task.completed && dueDatePassed ? "Pending" : "");
+    : !task.completed && dueDatePassed
+    ? "Pending"
+    : "";
 
   const formattedDueDate = formatDueDateDisplay(task);
 
-  // Create a popover that shows who created the task
-  const popover = (
-    <Popover id={`popover-${task._id}`}>
-      <Popover.Body>
-        {task.createdBy && 
-          (task.createdBy._id === currentUser._id ? "Created by you" : `Created by ${task.createdBy.name}`)
-        }
-      </Popover.Body>
-    </Popover>
-  );
-
-  return (
-    <div className={`card task-item ${task.completed ? "completed" : ""}`} onClick={handleItemClick}>
+  const cardContent = (
+    <div
+      className={`card task-item ${task.completed ? "completed" : ""}`}
+      onClick={handleItemClick}
+    >
       <div className="card-body p-2">
         {/* Task Header */}
         <div className="task-item-header">
@@ -172,7 +167,9 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
         </div>
 
         {task.description && (
-          <div className={`task-item-description ${expanded ? "expanded" : ""}`}>
+          <div
+            className={`task-item-description ${expanded ? "expanded" : ""}`}
+          >
             <p className="mb-0">{task.description}</p>
             {task.description.length > 100 && (
               <button
@@ -222,15 +219,17 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             </div>
           )}
 
-          {/* Creator Info with Left Popover */}
-          {task.createdBy && (
-            <OverlayTrigger trigger={['hover', 'focus']} placement="left" overlay={popover}>
-              <div className="task-created-by" style={{ marginLeft: 'auto', cursor: 'pointer' }}>
-                <small>
-                  {task.teamId && (task.createdBy._id === currentUser._id ? "You" : `Created by ${task.createdBy.name}`)}
-                </small>
-              </div>
-            </OverlayTrigger>
+          {/* Creator info in footer with "Created by" text (only in team mode) */}
+          {task.createdBy && task.teamId && (
+            <div className="task-created-by" style={{ marginLeft: "auto" }}>
+              <small>
+                {`Created by ${
+                  task.createdBy._id === currentUser._id
+                    ? "you"
+                    : task.createdBy.name
+                }`}
+              </small>
+            </div>
           )}
         </div>
       </div>
@@ -267,11 +266,29 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             </div>
           </div>,
           document.body
-        )
-      }
+        )}
 
       <span style={{ display: "none" }}>{currentTime}</span>
     </div>
+  );
+
+  return task.teamId && task.createdBy ? (
+    <OverlayTrigger
+      trigger={["hover", "focus"]}
+      placement="left"
+      delay={{ show: 150, hide: 0 }}
+      overlay={
+        <Tooltip id={`tooltip-${task._id}`} className="custom-tooltip">
+          {task.createdBy._id === currentUser._id
+            ? "Created by you"
+            : `Created by ${task.createdBy.name}`}
+        </Tooltip>
+      }
+    >
+      {cardContent}
+    </OverlayTrigger>
+  ) : (
+    cardContent
   );
 };
 
