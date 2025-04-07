@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
-import { toast } from "react-toastify"; // Add this import at the top
+import { toast } from "react-toastify"; 
 
-// A basic regex to check email format; adjust as needed.
 const isValidEmail = (email) => {
   const regex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
   return regex.test(email);
@@ -15,13 +14,11 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update the field as the user types
   const handleEmailInputChange = (e) => {
     setEmailInput(e.target.value);
     setError("");
   };
 
-  // Attempt to add an email from the current input
   const addEmail = (email) => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return;
@@ -38,27 +35,23 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
     setError("");
   };
 
-  // When user types a comma or presses Enter, add the current email to our list
   const handleEmailKeyDown = (e) => {
     if (e.key === "," || e.key === "Enter") {
-      e.preventDefault(); // Prevent comma/enter from submitting the form
+      e.preventDefault(); 
       addEmail(emailInput);
     }
   };
 
-  // On blur, if there is still a value, attempt to add it
   const handleEmailBlur = () => {
     if (emailInput !== "") {
       addEmail(emailInput);
     }
   };
 
-  // Allow removal of an email token/chip
   const removeEmail = (emailToRemove) => {
     setInvitedEmails(invitedEmails.filter((email) => email !== emailToRemove));
   };
 
-  // Final submission: ensure the team has a name and at least one invited email.
   const handleCreate = async () => {
     if (!teamName.trim()) {
       setError("Please enter a team name.");
@@ -72,14 +65,12 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
     setIsLoading(true);
     try {
       await onCreate({ teamName, members: invitedEmails });
-      // Reset form
       setTeamName("");
       setInvitedEmails([]);
       setEmailInput("");
       setError("");
       onClose();
       
-      // Show success toast with team creation details
       toast.success(
         <div>
           <strong>{teamName}</strong> team created!
@@ -121,7 +112,6 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
       </Modal.Header>
       <Modal.Body>
         <Form>
-          {/* Team Name Field */}
           <Form.Group controlId="teamName">
             <Form.Label>Title</Form.Label>
             <Form.Control
@@ -132,13 +122,12 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
             />
           </Form.Group>
 
-          {/* Invite Members Field */}
           <Form.Group controlId="inviteEmails" className="mt-3">
             <Form.Label>Invite Members</Form.Label>
             <div
               className="border rounded"
               style={{ 
-                minHeight: "38px",  // Changed from fixed height to minHeight
+                minHeight: "38px", 
                 backgroundColor: "#fff",
                 padding: "0.375rem"
               }}
@@ -175,7 +164,7 @@ const CreateTeamModal = ({ show, onClose, onCreate }) => {
                     boxShadow: "none",
                     padding: "0 0.5rem",
                     height: "28px",
-                    flex: "1 0 200px", // Increased minimum width
+                    flex: "1 0 200px", 
                     minWidth: 0,
                     backgroundColor: "transparent"
                   }}

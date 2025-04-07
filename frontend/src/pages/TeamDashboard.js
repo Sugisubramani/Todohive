@@ -25,7 +25,6 @@ const TeamDashboard = () => {
         const res = await axios.get("http://localhost:5000/api/teams", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        // Find team by ID instead of name
         const team = res.data.find((t) => t._id === teamId);
         if (team) {
           setSelectedTeam(team);

@@ -1,4 +1,3 @@
-// taskController.js
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
@@ -10,9 +9,8 @@ function getCurrentLocalDateString() {
   return moment().format("YYYY-MM-DD");
 }
 
-// Rename Attachment
 exports.renameAttachment = async (req, res) => {
-  const { id } = req.params; // Task ID
+  const { id } = req.params; 
   let { originalPath, newFileName } = req.body;
 
   newFileName = newFileName.trim();
@@ -56,7 +54,6 @@ exports.renameAttachment = async (req, res) => {
       return res.status(404).json({ message: "Attachment not found in task" });
     }
 
-    // Emit update event after renaming attachment
     const io = req.app.get("io");
     if (updatedTask.teamId) {
       io.to(updatedTask.teamId.toString()).emit("taskUpdated", updatedTask);
@@ -71,7 +68,6 @@ exports.renameAttachment = async (req, res) => {
   }
 };
 
-// Create Task
 exports.createTask = async (req, res) => {
   try {
     const { title, description, dueDate, priority, teamId, personal } = req.body;
@@ -82,7 +78,6 @@ exports.createTask = async (req, res) => {
       });
     }
 
-    // Handle due date formatting
     let finalDueDate = null;
     let isDateOnly = false;
     let localDueDate = null;
@@ -98,7 +93,6 @@ exports.createTask = async (req, res) => {
       }
     }
 
-    // Handle attachments
     const attachments = req.files
       ? req.files.map((file) => ({
           path: `/uploads/${file.filename}`,
@@ -106,7 +100,6 @@ exports.createTask = async (req, res) => {
         }))
       : [];
 
-    // Create task object
     const task = new Task({
       user: req.user.id,
       createdBy: req.user.id,
@@ -122,7 +115,6 @@ exports.createTask = async (req, res) => {
 
     await task.save();
 
-    // Emit socket event
     const io = req.app.get("io");
     if (task.teamId) {
       io.to(task.teamId.toString()).emit("taskAdded", task);
@@ -137,17 +129,14 @@ exports.createTask = async (req, res) => {
   }
 };
 
-// Get Tasks
 exports.getTasks = async (req, res) => {
   try {
     const { page = 1, priority, status, teamId, personal } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
 
-    // Build the query object
     let queryObj = {};
 
-    // Handle team vs personal mode
     if (personal === 'true') {
       queryObj = { 
         user: req.user.id,
@@ -160,7 +149,6 @@ exports.getTasks = async (req, res) => {
       queryObj = { teamId };
     }
 
-    // Add priority filter
     if (priority && priority !== "All") {
       if (priority.includes(",")) {
         const priorities = priority.split(",").map((p) => p.trim());
@@ -170,7 +158,6 @@ exports.getTasks = async (req, res) => {
       }
     }
 
-    // Add status filter
     if (status && status !== "All") {
       const now = new Date();
       const currentLocalDate = moment().format("YYYY-MM-DD");
@@ -209,13 +196,11 @@ exports.getTasks = async (req, res) => {
       }
     }
 
-    // Query tasks
     let tasksQuery = Task.find(queryObj)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    // Only populate user details for team tasks
     if (!personal) {
       tasksQuery = tasksQuery
         .populate('createdBy', 'name')
@@ -237,7 +222,6 @@ exports.getTasks = async (req, res) => {
   }
 };
 
-// Update Task
 exports.updateTask = async (req, res) => {
   try {
     let task = await Task.findById(req.params.id);
@@ -329,7 +313,6 @@ exports.updateTask = async (req, res) => {
 
     await task.save();
 
-    // Emit update event after task modification
     const io = req.app.get("io");
     if (task.teamId) {
       io.to(task.teamId.toString()).emit("taskUpdated", task);
@@ -344,7 +327,6 @@ exports.updateTask = async (req, res) => {
   }
 };
 
-// Delete Attachment
 exports.deleteAttachment = async (req, res) => {
   try {
     const { filePath } = req.body;
@@ -370,7 +352,6 @@ exports.deleteAttachment = async (req, res) => {
       console.warn("File not found on disk:", fullPath);
     }
 
-    // Emit event after attachment deletion
     const io = req.app.get("io");
     if (task.teamId) {
       io.to(task.teamId.toString()).emit("taskUpdated", task);
@@ -385,7 +366,6 @@ exports.deleteAttachment = async (req, res) => {
   }
 };
 
-// Delete Task
 exports.deleteTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -403,7 +383,6 @@ exports.deleteTask = async (req, res) => {
 
     await Task.findByIdAndDelete(req.params.id);
 
-    // Emit event after task deletion
     const io = req.app.get("io");
     if (task.teamId) {
       io.to(task.teamId.toString()).emit("taskDeleted", req.params.id);
@@ -418,7 +397,6 @@ exports.deleteTask = async (req, res) => {
   }
 };
 
-// Clear Tasks
 exports.clearTasks = async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
@@ -491,7 +469,6 @@ exports.clearTasks = async (req, res) => {
     console.log("Deleting tasks with query:", queryObj);
     await Task.deleteMany(queryObj);
     
-    // Emit event after clearing tasks
     const io = req.app.get("io");
     if (teamId) {
       io.to(teamId.toString()).emit("tasksCleared");

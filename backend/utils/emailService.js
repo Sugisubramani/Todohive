@@ -1,15 +1,14 @@
 const nodemailer = require("nodemailer");
 
 async function sendInvitationEmail(toEmail, invitationLink, teamName) {
-  // Create a transporter using your SMTP settings.
-  // These should be set in your .env file.
+
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,         // e.g., smtp.gmail.com
-    port: process.env.SMTP_PORT,         // e.g., 587
-    secure: process.env.SMTP_SECURE === "true", // true for 465, false for others
+    host: process.env.SMTP_HOST,       
+    port: process.env.SMTP_PORT,        
+    secure: process.env.SMTP_SECURE === "true", 
     auth: {
-      user: process.env.SMTP_USER,       // your SMTP username/email
-      pass: process.env.SMTP_PASS,       // your SMTP password
+      user: process.env.SMTP_USER,      
+      pass: process.env.SMTP_PASS,       
     },
   });
 

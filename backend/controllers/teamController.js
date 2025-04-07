@@ -4,11 +4,9 @@ const { sendInvitationEmail } = require("../utils/emailService");
 
 exports.createTeam = async (req, res) => {
   try {
-    const { teamName, members } = req.body; // 'members' is an array of emails
+    const { teamName, members } = req.body; 
     const adminId = req.user.id;
-    // Convert the admin email to lowercase
     const adminEmail = req.user.email.toLowerCase();
-    // Convert all invited emails to lowercase
     const normalizedMembers = members.map(email => email.toLowerCase());
 
     const newTeam = await Team.create({
@@ -48,19 +46,17 @@ exports.createTeam = async (req, res) => {
 exports.getTeams = async (req, res) => {
   try {
     const userEmail = req.user.email.toLowerCase();
-    // First, populate the admin field to get admin details
     const teams = await Team.find({ members: userEmail }).populate('admin', 'id');
     
-    // Add role information to each team
     const teamsWithRoles = teams.map(team => ({
       _id: team._id,
       name: team.name,
       members: team.members,
       admin: team.admin,
-      role: team.admin._id.toString() === req.user.id ? "admin" : "member" // Fix: use _id instead of id
+      role: team.admin._id.toString() === req.user.id ? "admin" : "member" 
     }));
 
-    console.log('Teams with roles:', teamsWithRoles); // Debug log
+    console.log('Teams with roles:', teamsWithRoles); 
     res.json(teamsWithRoles);
   } catch (error) {
     console.error("Error fetching teams:", error);
@@ -75,7 +71,6 @@ exports.leaveTeam = async (req, res) => {
       return res.status(400).json({ message: "Team ID is required" });
     }
     
-    // Ensure the user's email is normalized
     const userEmail = req.user.email.toLowerCase();
 
     // Find the team by ID
@@ -84,19 +79,11 @@ exports.leaveTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
-    // Check if the user is actually a member of the team
     if (!team.members.includes(userEmail)) {
       return res.status(400).json({ message: "User is not a member of this team" });
     }
 
-    // Remove the user from the team members array
     team.members = team.members.filter((member) => member !== userEmail);
-
-    // Optionally, you might want to handle the situation where the leaving user is the admin.
-    // For example, you could either assign a new admin or restrict admins from leaving via this endpoint.
-    // if (team.admin === req.user.id) {
-    //   return res.status(400).json({ message: "Admin cannot leave the team. Please assign a new admin first." });
-    // }
 
     await team.save();
     res.status(200).json({ message: "Successfully left the team" });
@@ -126,7 +113,6 @@ exports.acceptInvitation = async (req, res) => {
       return res.status(400).json({ message: "Invitation not found or already accepted" });
     }
 
-    // Remove the invitation and add the user to the team
     team.pendingInvites = team.pendingInvites.filter(
       (e) => e.toLowerCase().trim() !== emailFromToken
     );
@@ -137,7 +123,6 @@ exports.acceptInvitation = async (req, res) => {
     }
     await team.save();
 
-    // Redirect to the Personal Dashboard with the joined team name
     res.redirect(`${process.env.APP_URL}/dashboard?joinedTeam=${team.name}`);
   } catch (error) {
     console.error("Error accepting invitation:", error);

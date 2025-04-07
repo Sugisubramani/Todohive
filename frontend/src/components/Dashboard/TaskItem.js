@@ -23,7 +23,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const currentUser = JSON.parse(localStorage.getItem("user"));
 
-  // Debug logs
   console.log("Task data:", task);
   console.log("Current user:", currentUser);
   console.log("Task created by:", task.createdBy);
@@ -125,7 +124,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
       onClick={handleItemClick}
     >
       <div className="card-body p-2">
-        {/* Task Header */}
         <div className="task-item-header">
           <input
             type="checkbox"
@@ -185,9 +183,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           </div>
         )}
 
-        {/* Task Footer */}
         <div className="task-item-footer">
-          {/* Due Date (Left) */}
           {formattedDueDate && (
             <div className="task-due-date">
               <FaRegCalendarAlt className="icon-date" />
@@ -195,14 +191,12 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             </div>
           )}
 
-          {/* Priority (Left) */}
           {task.priority && (
             <div className={`task-priority ${task.priority.toLowerCase()}`}>
               <small>Priority: {task.priority}</small>
             </div>
           )}
 
-          {/* Attachments (Left) */}
           {task.attachments && task.attachments.length > 0 && (
             <div className="task-attachments">
               <FaPaperclip className="clip-icon" />
@@ -219,7 +213,6 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             </div>
           )}
 
-          {/* Creator info in footer with "Created by" text (only in team mode) */}
           {task.createdBy && task.teamId && (
             <div className="task-created-by" style={{ marginLeft: "auto" }}>
               <small>

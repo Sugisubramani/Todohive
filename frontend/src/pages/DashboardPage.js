@@ -19,7 +19,6 @@ const DashboardPage = ({ teamName }) => {
   const { selectedTeam, setSelectedTeam } = useContext(TeamContext);
   const navigate = useNavigate();
 
-  // Component states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filters, setFilters] = useState({ priority: ["All"], status: ["All"] });
   const [searchText, setSearchText] = useState("");
@@ -32,11 +31,9 @@ const DashboardPage = ({ teamName }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
-  // Toast state for notifications
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
 
-  // Refs
   const moreMenuRef = useRef(null);
   const socketRef = useRef(null);
   const prevTasksCountRef = useRef(tasks.length);
@@ -55,25 +52,20 @@ const DashboardPage = ({ teamName }) => {
       try {
         let url = `http://localhost:5000/api/tasks?page=${currentPage}&limit=5`;
 
-        // Handle team vs personal mode
         if (selectedTeam) {
           url += `&teamId=${selectedTeam._id}`;
         } else {
-          // Add explicit personal mode filter
           url += `&personal=true&teamId=null`;
         }
 
-        // Add priority filter
         if (!isAllSelected(filters.priority)) {
           url += `&priority=${filters.priority.join(",")}`;
         }
 
-        // Add status filter
         if (!isAllSelected(filters.status)) {
           url += `&status=${filters.status.join(",")}`;
         }
 
-        // Add search filter
         if (searchText.trim()) {
           url += `&search=${encodeURIComponent(searchText.trim())}`;
         }
@@ -129,19 +121,15 @@ const DashboardPage = ({ teamName }) => {
     const socket = socketRef.current;
     if (!socket) return;
 
-    // Leave previous room if exists
     if (selectedTeam?.previousTeamId) {
       socket.emit("leaveTeamRoom", selectedTeam.previousTeamId);
     }
 
-    // Join appropriate room
     if (selectedTeam) {
       console.log("Joining team room:", selectedTeam._id);
       socket.emit("joinTeamRoom", selectedTeam._id);
     } else {
-      console.log("Joining personal room");
-      // Get user ID from localStorage instead of req
-      const user = JSON.parse(localStorage.getItem("user"));
+      console.log("Joining personal room");      const user = JSON.parse(localStorage.getItem("user"));
       socket.emit("joinPersonalRoom", user._id);
     }
 
@@ -150,7 +138,6 @@ const DashboardPage = ({ teamName }) => {
       fetchTasks(currentPageRef.current);
     };
 
-    // Listen to events
     socket.on("taskAdded", handleTaskChange);
     socket.on("taskUpdated", handleTaskChange);
     socket.on("taskDeleted", handleTaskChange);
@@ -276,7 +263,6 @@ const DashboardPage = ({ teamName }) => {
 
   return (
     <>
-      {/* React-Bootstrap Toast for notifications */}
       <Toast
         onClose={() => setShowToast(false)}
         show={showToast}

@@ -1,4 +1,3 @@
-// src/components/Dashboard/TaskForm.js
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
@@ -65,7 +64,6 @@ const AttachmentTooltip = ({ show, message }) => {
 
 const AttachmentInput = ({ value, onRename }) => {
   const inputRef = useRef(null);
-  // Remove fallbackName usage so that on blur we always clear to empty.
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipText, setTooltipText] = useState("");
 
@@ -140,7 +138,6 @@ const AttachmentInput = ({ value, onRename }) => {
     clearTooltipIfValid(newValue);
   };
 
-  // Update onBlur: if field is empty, pass an empty string.
   const handleBlur = (e) => {
     let newValue = e.target.value.trim();
     if (newValue === "" || /^\.[^.]+$/.test(newValue)) {
@@ -184,14 +181,12 @@ const TaskForm = ({
     priority: taskToEdit ? taskToEdit.priority : "",
   });
   const [attachments, setAttachments] = useState([]);
-  // Existing attachments removed.
 
-  // isEditingTime: true means we show full datetime; false means date-only.
   const [isEditingTime, setIsEditingTime] = useState(() => {
     if (taskToEdit && taskToEdit.dueDate) {
       return !taskToEdit.isDateOnly;
     }
-    return true; // default for new tasks
+    return true; 
   });
 
   const descriptionRef = useRef(null);
@@ -246,7 +241,6 @@ const TaskForm = ({
 
   const handleRenameNewFile = (index, newName) => {
     const originalFileName = attachments[index].file.name;
-    // If the field (after trimming) is empty, revert completely to the original file name.
     if (newName.trim() === "") {
       setAttachments((prev) =>
         prev.map((file, i) =>
@@ -257,7 +251,6 @@ const TaskForm = ({
     }
     const originalExt = originalFileName.split(".").pop();
     let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
-    // If the sanitized name does not contain a dot, append the original extension.
     if (!sanitized.includes(".")) {
       sanitized = sanitized + "." + originalExt;
     }
@@ -279,7 +272,6 @@ const TaskForm = ({
     e.preventDefault();
     const data = new FormData();
 
-    // Add basic task data
     data.append("title", formData.title);
     data.append("description", formData.description);
     if (formData.dueDate) {
@@ -289,14 +281,12 @@ const TaskForm = ({
       data.append("priority", formData.priority);
     }
 
-    // Properly handle teamId
     if (teamId) {
       data.append("teamId", teamId);
     } else {
       data.append("personal", "true");
     }
 
-    // Handle attachments
     if (attachments.length > 0) {
       attachments.forEach((item) => {
         const renamedFile = new File([item.file], item.customName, { 

@@ -6,7 +6,6 @@ const authMiddleware = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // Assign only the nested user object so that req.user.id is available.
     req.user = decoded.user;
     next();
   } catch (err) {

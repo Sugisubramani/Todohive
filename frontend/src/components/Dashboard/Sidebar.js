@@ -1,4 +1,3 @@
-// src/components/Dashboard/Sidebar.js
 import React, { useState, useEffect, useContext } from "react";
 import { Dropdown, Button, Form } from "react-bootstrap";
 import { FaBars, FaPlus, FaUsers, FaSlidersH, FaCrown } from "react-icons/fa";
@@ -25,15 +24,12 @@ const Sidebar = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Retrieve current user info
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : { name: "User" };
   const initial = user.name ? user.name.charAt(0).toUpperCase() : "U";
 
-  // Use shared team state from context
   const { selectedTeam, setSelectedTeam } = useContext(TeamContext);
 
-  // Local states
   const [selectedFilters, setSelectedFilters] = useState(["All"]);
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(["All"]);
@@ -43,7 +39,6 @@ const Sidebar = ({
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Enhanced toggleSidebar function
   const handleToggleSidebar = () => {
     if (isAnimating) return;
     setIsAnimating(true);
@@ -51,7 +46,6 @@ const Sidebar = ({
     setTimeout(() => setIsAnimating(false), 300);
   };
 
-  // Fetch teams when component mounts
   useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -82,17 +76,15 @@ const Sidebar = ({
     fetchTeams();
   }, [location.search, setSelectedTeam]);
 
-  // Handle team selection with toast notification
   const handleTeamClick = (team) => {
-    // First check if we're already on this exact team
     if (selectedTeam?._id === team._id) {
-      return; // Do nothing if clicking the same team
+      return; 
     }
 
     setSelectedTeam(team);
     if (onTeamSelect) onTeamSelect(team);
     localStorage.setItem("selectedTeam", JSON.stringify(team));
-    navigate(`/team/${team.name}?id=${team._id}`); // Add team ID to URL
+    navigate(`/team/${team.name}?id=${team._id}`); 
     
     toast.success(`Switched to ${team.name} team`, {
       position: "top-right",
@@ -104,7 +96,6 @@ const Sidebar = ({
     });
   };
 
-  // Handle switching to personal mode with toast notification
   const handleSwitchToPersonal = () => {
     setSelectedTeam(null);
     localStorage.removeItem("selectedTeam");
@@ -120,7 +111,6 @@ const Sidebar = ({
     });
   };
 
-  // Logout functionality
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -130,7 +120,6 @@ const Sidebar = ({
     navigate("/auth/login");
   };
 
-  // Handle creating a new team
   const handleCreateTeam = async ({ teamName, members }) => {
     try {
       const token = localStorage.getItem("token");
@@ -143,7 +132,6 @@ const Sidebar = ({
       setTeams((prevTeams) => [...prevTeams, newTeam]);
       setShowModal(false);
 
-      // Show creation success toast
       toast(
         <div className="toast-content">
           <div>
@@ -176,7 +164,6 @@ const Sidebar = ({
     }
   };
 
-  // Filter handlers
   const handleFilterToggle = (filter) => {
     let newFilters = [...selectedFilters];
     if (filter === "All") {
@@ -189,7 +176,7 @@ const Sidebar = ({
       if (newFilters.length === 0) newFilters = ["All"];
     }
     setSelectedFilters(newFilters);
-    onFilterChange({ priority: newFilters, status: selectedStatus }); // Pass updated filters
+    onFilterChange({ priority: newFilters, status: selectedStatus }); 
   };
 
   const handleStatusToggle = (stat) => {
@@ -204,7 +191,7 @@ const Sidebar = ({
       if (newStatus.length === 0) newStatus = ["All"];
     }
     setSelectedStatus(newStatus);
-    onFilterChange({ priority: selectedFilters, status: newStatus }); // Pass updated status
+    onFilterChange({ priority: selectedFilters, status: newStatus }); 
   };
 
   const displayPriorityText =
@@ -230,7 +217,6 @@ const Sidebar = ({
       className={`sidebar bg-light ${collapsed ? "collapsed" : ""}`}
       style={{ transition: "width 0.3s ease-in-out" }}
     >
-      {/* Sidebar Header */}
       <div className="sidebar-header">
         <Button
           variant="light"
@@ -282,7 +268,6 @@ const Sidebar = ({
         )}
       </div>
 
-      {/* Sidebar Content */}
       {!collapsed && (
         <div className="sidebar-content">
           <Button

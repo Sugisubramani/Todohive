@@ -51,7 +51,6 @@ const TaskSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Add index for better query performance
 TaskSchema.index({ user: 1, teamId: 1 });
 TaskSchema.index({ createdAt: -1 });
 
