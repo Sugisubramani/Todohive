@@ -123,7 +123,7 @@ exports.acceptInvitation = async (req, res) => {
     }
     await team.save();
 
-    res.redirect(`${process.env.APP_URL}/dashboard?joinedTeam=${team.name}`);
+    res.redirect(`${process.env.APP_URL}/teams/${team.name}/dashboard?id=${team._id}`);
   } catch (error) {
     console.error("Error accepting invitation:", error);
     res.status(400).json({ message: "Invalid or expired token" });

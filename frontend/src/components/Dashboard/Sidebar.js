@@ -84,7 +84,7 @@ const Sidebar = ({
     setSelectedTeam(team);
     if (onTeamSelect) onTeamSelect(team);
     localStorage.setItem("selectedTeam", JSON.stringify(team));
-    navigate(`/team/${team.name}?id=${team._id}`); 
+    navigate(`/teams/${team.name}/dashboard?id=${team._id}`);
     
     toast.success(`Switched to ${team.name} team`, {
       position: "top-right",

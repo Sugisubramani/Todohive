@@ -26,7 +26,7 @@ function App() {
             }
           />
           <Route 
-            path="/team/:teamName" 
+            path="/teams/:teamName/dashboard" 
             element={
               <PrivateRoute>
                 <TeamDashboard />
