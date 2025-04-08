@@ -24,7 +24,8 @@ exports.createTeam = async (req, res) => {
           { expiresIn: "7d" }
         );
         const invitationLink = `http://localhost:5000/api/teams/invite?token=${token}`;
-        await sendInvitationEmail(email, invitationLink, teamName);
+        // Pass the sender's name (req.user.name) as the fourth parameter
+        await sendInvitationEmail(email, invitationLink, teamName, req.user.name);
         console.log(`Invitation email sent to ${email}`);
       } catch (error) {
         console.error(`Failed to send invitation to ${email}:`, error);
@@ -43,18 +44,23 @@ exports.createTeam = async (req, res) => {
   }
 };
 
+
 exports.getTeams = async (req, res) => {
   try {
     const userEmail = req.user.email.toLowerCase();
     const teams = await Team.find({ members: userEmail }).populate('admin', 'id');
     
-    const teamsWithRoles = teams.map(team => ({
-      _id: team._id,
-      name: team.name,
-      members: team.members,
-      admin: team.admin,
-      role: team.admin._id.toString() === req.user.id ? "admin" : "member" 
-    }));
+    const teamsWithRoles = teams.map(team => {
+      // If team.admin is null, assume the user is not admin.
+      const isAdmin = team.admin && team.admin._id && team.admin._id.toString() === req.user.id;
+      return {
+        _id: team._id,
+        name: team.name,
+        members: team.members,
+        admin: team.admin,
+        role: isAdmin ? "admin" : "member",
+      };
+    });
 
     console.log('Teams with roles:', teamsWithRoles); 
     res.json(teamsWithRoles);
@@ -63,6 +69,7 @@ exports.getTeams = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.leaveTeam = async (req, res) => {
   try {

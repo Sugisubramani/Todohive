@@ -5,6 +5,7 @@ import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
 import TeamDashboard from './pages/TeamDashboard';
 import VerificationPage from './pages/VerificationPage';
+import TeamManagementPage from './pages/TeamManagementPage';
 import PrivateRoute from './routes/PrivateRoute';
 import { TeamProvider } from './context/TeamContext';
 import './styles/Dashboard.css';
@@ -33,6 +34,7 @@ function App() {
               </PrivateRoute>
             }
           />
+          <Route path="/team-management" element={<TeamManagementPage />} />
         </Routes>
       </Router>
     </TeamProvider>

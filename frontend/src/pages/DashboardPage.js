@@ -30,6 +30,9 @@ const DashboardPage = ({ teamName }) => {
   const [pages, setPages] = useState(1);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [showTeamManagementModal, setShowTeamManagementModal] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [newMemberEmail, setNewMemberEmail] = useState("");
 
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -200,6 +203,28 @@ const DashboardPage = ({ teamName }) => {
     setShowToast(true);
   }, [selectedTeam]);
 
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:5000/api/teams/members", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.data && response.data.members) {
+          setTeamMembers(response.data.members);
+        } else {
+          console.error("Invalid response format:", response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching team members:", error);
+      }
+    };
+
+    if (showTeamManagementModal) {
+      fetchTeamMembers();
+    }
+  }, [showTeamManagementModal]);
+
   const handleLeaveTeam = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -218,6 +243,25 @@ const DashboardPage = ({ teamName }) => {
     }
   };
 
+  const handleAddMember = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:5000/api/teams/addMember",
+        { email: newMemberEmail, teamId: selectedTeam._id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNewMemberEmail("");
+      const response = await axios.get("http://localhost:5000/api/teams/members", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeamMembers(response.data.members);
+    } catch (error) {
+      console.error("Error adding member:", error);
+      alert("Failed to add member. Please try again.");
+    }
+  };
+
   const openAddTaskModal = () => setShowModal(true);
   const closeModal = () => {
     setShowModal(false);
@@ -230,6 +274,9 @@ const DashboardPage = ({ teamName }) => {
   };
 
   const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
+
+  const openTeamManagementModal = () => setShowTeamManagementModal(true);
+  const closeTeamManagementModal = () => setShowTeamManagementModal(false);
 
   const handleDeleteTask = async (taskId) => {
     try {
@@ -321,6 +368,9 @@ const DashboardPage = ({ teamName }) => {
                 <Dropdown.Menu>
                   <Dropdown.Item onClick={() => setShowLeaveModal(true)}>
                     Leave Team
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={openTeamManagementModal}>
+                    Team Management
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
@@ -473,6 +523,45 @@ const DashboardPage = ({ teamName }) => {
             >
               Leave
             </button>
+          </Modal.Footer>
+        </Modal>
+        <Modal
+          show={showTeamManagementModal}
+          onHide={closeTeamManagementModal}
+          centered
+          size="lg"
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>Team Management</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <h5>Team Members</h5>
+            <ul>
+              {teamMembers.map((member) => (
+                <li key={member.id}>
+                  {member.name} ({member.role})
+                </li>
+              ))}
+            </ul>
+            <hr />
+            <h5>Add New Member</h5>
+            <div className="d-flex">
+              <input
+                type="email"
+                placeholder="Enter member's email"
+                className="form-control me-2"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+              />
+              <button className="btn btn-primary" onClick={handleAddMember}>
+                Add
+              </button>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={closeTeamManagementModal}>
+              Close
+            </Button>
           </Modal.Footer>
         </Modal>
       </div>
