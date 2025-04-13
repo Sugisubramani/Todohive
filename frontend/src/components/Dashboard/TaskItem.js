@@ -27,6 +27,19 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   console.log("Current user:", currentUser);
   console.log("Task created by:", task.createdBy);
 
+  // --- Magic Fix Part 1: ID extraction and conversion ---
+  // Force both currentUser and task.createdBy IDs to string and trim any extra spaces.
+  const currentUserId = String(currentUser._id || currentUser.id || "").trim();
+
+  const createdById =
+    task.createdBy && (task.createdBy._id || task.createdBy.id)
+      ? String(task.createdBy._id || task.createdBy.id).trim()
+      : task.createdBy
+      ? String(task.createdBy).trim()
+      : "";
+  const createdByName =
+    task.createdBy && task.createdBy.name ? task.createdBy.name : "";
+
   useEffect(() => {
     const intervalId = setInterval(() => {
       setCurrentTime(Date.now());
@@ -38,6 +51,8 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     if (!task.completed) onEditTask(task);
   };
 
+  // --- Magic Fix Part 2: Prevent infinite update loops ---
+  // Remove currentTime from dependencies; update only when the dueDate changes.
   useEffect(() => {
     if (!task.dueDate) {
       setCurrentTime(Date.now());
@@ -52,7 +67,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
       }, delay);
       return () => clearTimeout(timeoutId);
     }
-  }, [task.dueDate, currentTime]);
+  }, [task.dueDate]);
 
   const toggleComplete = async (e) => {
     e.stopPropagation();
@@ -217,9 +232,7 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             <div className="task-created-by" style={{ marginLeft: "auto" }}>
               <small>
                 {`Created by ${
-                  task.createdBy._id === currentUser._id
-                    ? "you"
-                    : task.createdBy.name
+                  createdById === currentUserId ? "you" : createdByName
                 }`}
               </small>
             </div>
@@ -272,9 +285,9 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
       delay={{ show: 150, hide: 0 }}
       overlay={
         <Tooltip id={`tooltip-${task._id}`} className="custom-tooltip">
-          {task.createdBy._id === currentUser._id
+          {createdById === currentUserId
             ? "Created by you"
-            : `Created by ${task.createdBy.name}`}
+            : `Created by ${createdByName}`}
         </Tooltip>
       }
     >

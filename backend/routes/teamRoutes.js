@@ -40,6 +40,19 @@ router.post(
     next();
   },
   teamController.leaveTeam
-);
+);  
+
+// Route to fetch team members:
+router.get("/members", authMiddleware, teamController.getTeamMembers);
+
+// Route to edit team name:
+router.put("/editTeamName", authMiddleware, teamController.editTeamName);
+
+// Route to add a team member:
+router.post("/addMember", authMiddleware, teamController.addMember);
+
+// Route to remove a team member:
+router.delete("/removeMember/:memberId", authMiddleware, teamController.removeMember);
+
 
 module.exports = router;

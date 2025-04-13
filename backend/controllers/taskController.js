@@ -100,6 +100,7 @@ exports.createTask = async (req, res) => {
         }))
       : [];
 
+    // Save createdBy as simply the user’s ObjectId.
     const task = new Task({
       user: req.user.id,
       createdBy: req.user.id,
@@ -115,6 +116,9 @@ exports.createTask = async (req, res) => {
 
     await task.save();
 
+    // Magic fix: populate createdBy (with name) before returning.
+    await task.populate("createdBy", "name");
+
     const io = req.app.get("io");
     if (task.teamId) {
       io.to(task.teamId.toString()).emit("taskAdded", task);
@@ -129,15 +133,17 @@ exports.createTask = async (req, res) => {
   }
 };
 
+
 exports.getTasks = async (req, res) => {
   try {
-    const { page = 1, priority, status, teamId, personal } = req.query;
+    const { page = 1, priority, status, teamId, personal, search } = req.query;
     const limit = 5;
     const skip = (page - 1) * limit;
 
     let queryObj = {};
 
-    if (personal === 'true') {
+    // Handle personal tasks vs. team tasks.
+    if (personal === "true") {
       queryObj = { 
         user: req.user.id,
         $or: [
@@ -149,6 +155,7 @@ exports.getTasks = async (req, res) => {
       queryObj = { teamId };
     }
 
+    // Filter by priority.
     if (priority && priority !== "All") {
       if (priority.includes(",")) {
         const priorities = priority.split(",").map((p) => p.trim());
@@ -158,13 +165,14 @@ exports.getTasks = async (req, res) => {
       }
     }
 
+    // Filter by status.
     if (status && status !== "All") {
       const now = new Date();
       const currentLocalDate = moment().format("YYYY-MM-DD");
       const statusArr = status.includes(",") ? status.split(",").map(s => s.trim()) : [status];
-      
+
       const statusConditions = [];
-      
+
       if (statusArr.includes("Completed")) {
         statusConditions.push({ completed: true });
       }
@@ -189,23 +197,31 @@ exports.getTasks = async (req, res) => {
       }
 
       if (statusConditions.length > 0) {
-        queryObj.$and = [
-          { ...queryObj },
-          { $or: statusConditions }
-        ];
+        queryObj = { $and: [ queryObj, { $or: statusConditions } ] };
+      }
+    }
+
+    // Search functionality.
+    if (search && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+      if (Object.keys(queryObj).length > 0) {
+        queryObj = { 
+          $and: [
+            queryObj,
+            { $or: [{ title: searchRegex }, { description: searchRegex }] }
+          ]
+        };
+      } else {
+        queryObj = { $or: [{ title: searchRegex }, { description: searchRegex }] };
       }
     }
 
     let tasksQuery = Task.find(queryObj)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
-
-    if (!personal) {
-      tasksQuery = tasksQuery
-        .populate('createdBy', 'name')
-        .populate('user', 'name');
-    }
+      .limit(limit)
+      .populate("createdBy", "name")
+      .populate("user", "name");
 
     const tasks = await tasksQuery;
     const total = await Task.countDocuments(queryObj);
@@ -221,6 +237,7 @@ exports.getTasks = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.updateTask = async (req, res) => {
   try {

@@ -33,7 +33,6 @@ const DashboardPage = ({ teamName }) => {
   const [showTeamManagementModal, setShowTeamManagementModal] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
-
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
 
@@ -132,7 +131,8 @@ const DashboardPage = ({ teamName }) => {
       console.log("Joining team room:", selectedTeam._id);
       socket.emit("joinTeamRoom", selectedTeam._id);
     } else {
-      console.log("Joining personal room");      const user = JSON.parse(localStorage.getItem("user"));
+      console.log("Joining personal room");
+      const user = JSON.parse(localStorage.getItem("user"));
       socket.emit("joinPersonalRoom", user._id);
     }
 
@@ -224,6 +224,50 @@ const DashboardPage = ({ teamName }) => {
       fetchTeamMembers();
     }
   }, [showTeamManagementModal]);
+
+  // --- New Feature: Edit Team Name from Dropdown ---
+  const handleEditTeamName = async () => {
+    const newName = prompt("Enter new team name:", selectedTeam.name);
+    if (!newName || newName.trim() === "") return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        "http://localhost:5000/api/teams/editTeamName",
+        { teamId: selectedTeam._id, newName: newName.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Assuming the response returns the updated team object
+      setSelectedTeam(res.data.team);
+      setToastMessage(`Team name updated to ${res.data.team.name}`);
+      setShowToast(true);
+    } catch (error) {
+      console.error("Error editing team name:", error);
+      alert("Failed to update team name. Please try again.");
+    }
+  };
+
+  // --- New Feature: Remove a Team Member ---
+  const handleRemoveMember = async (memberId) => {
+    if (!window.confirm("Are you sure you want to remove this member?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:5000/api/teams/removeMember",
+        { teamId: selectedTeam._id, memberId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Refresh team members list.
+      const response = await axios.get("http://localhost:5000/api/teams/members", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setTeamMembers(response.data.members);
+      setToastMessage("Member removed successfully");
+      setShowToast(true);
+    } catch (error) {
+      console.error("Error removing member:", error);
+      alert("Failed to remove member. Please try again.");
+    }
+  };
 
   const handleLeaveTeam = async () => {
     try {
@@ -366,6 +410,9 @@ const DashboardPage = ({ teamName }) => {
                   <RiArrowDownSLine size={16} style={{ marginLeft: "4px", verticalAlign: "middle" }} />
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
+                  <Dropdown.Item onClick={handleEditTeamName}>
+                    Edit Team Name
+                  </Dropdown.Item>
                   <Dropdown.Item onClick={() => setShowLeaveModal(true)}>
                     Leave Team
                   </Dropdown.Item>
@@ -538,8 +585,16 @@ const DashboardPage = ({ teamName }) => {
             <h5>Team Members</h5>
             <ul>
               {teamMembers.map((member) => (
-                <li key={member.id}>
-                  {member.name} ({member.role})
+                <li key={member.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>
+                    {member.name} ({member.role})
+                  </span>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleRemoveMember(member.id)}
+                  >
+                    Remove
+                  </button>
                 </li>
               ))}
             </ul>

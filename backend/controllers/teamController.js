@@ -98,7 +98,134 @@ exports.leaveTeam = async (req, res) => {
     console.error("Error leaving team:", error);
     res.status(500).json({ message: "Server error while leaving team" });
   }
+};  
+
+exports.addMember = async (req, res) => {
+  try {
+    const { teamId, newMemberEmail } = req.body;
+    if (!teamId || !newMemberEmail) {
+      return res.status(400).json({ message: "Team ID and new member email are required" });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    if (team.admin.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the admin can add members" });
+    }
+
+    const email = newMemberEmail.toLowerCase();
+    if (team.members.includes(email) || team.pendingInvites.includes(email)) {
+      return res.status(400).json({ message: "User already invited or a member" });
+    }
+
+    team.pendingInvites.push(email);
+
+    const token = jwt.sign(
+      { teamId: team._id.toString(), email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    const invitationLink = `http://localhost:5000/api/teams/invite?token=${token}`;
+    await sendInvitationEmail(email, invitationLink, team.name, req.user.name);
+
+    await team.save();
+    res.status(200).json({ message: "Invitation sent successfully", team });
+  } catch (error) {
+    console.error("Error adding member:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 };
+
+
+exports.getTeamMembers = async (req, res) => {
+  try {
+    const { teamId } = req.query;
+    if (!teamId) {
+      return res.status(400).json({ message: "Team ID is required" });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    res.status(200).json({ members: team.members });
+  } catch (error) {
+    console.error("Error fetching team members:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.editTeamName = async (req, res) => {
+  try {
+    const { teamId, newName } = req.body;
+
+    if (!teamId || !newName) {
+      return res.status(400).json({ message: "Team ID and new name are required" });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    // Check if the requester is the admin
+    if (team.admin.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the admin can rename the team" });
+    }
+
+    team.name = newName;
+    await team.save();
+
+    res.status(200).json({ message: "Team name updated successfully", team });
+  } catch (error) {
+    console.error("Error updating team name:", error);
+    res.status(500).json({ message: "Server error while updating team name" });
+  }
+};
+
+// REMOVE A MEMBER FROM A TEAM
+exports.removeMember = async (req, res) => {
+  try {
+    const { teamId, userIdToRemove } = req.body;
+
+    if (!teamId || !userIdToRemove) {
+      return res.status(400).json({ message: "Team ID and User ID are required" });
+    }
+
+    const team = await Team.findById(teamId);
+    if (!team) {
+      return res.status(404).json({ message: "Team not found" });
+    }
+
+    // Only the admin can remove members
+    if (team.admin.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the team admin can remove members" });
+    }
+
+    // Don't allow removing the admin themselves
+    if (userIdToRemove === req.user.id) {
+      return res.status(400).json({ message: "Admin cannot remove themselves" });
+    }
+
+    const memberIndex = team.members.indexOf(userIdToRemove);
+    if (memberIndex === -1) {
+      return res.status(404).json({ message: "User is not a team member" });
+    }
+
+    team.members.splice(memberIndex, 1);
+    await team.save();
+
+    res.status(200).json({ message: "Member removed successfully", team });
+  } catch (error) {
+    console.error("Error removing member:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 
 exports.acceptInvitation = async (req, res) => {
   try {
