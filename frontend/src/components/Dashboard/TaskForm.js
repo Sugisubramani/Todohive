@@ -1,7 +1,8 @@
+// src/components/tasks/TaskForm.jsx
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Form, Button, Row, Col } from "react-bootstrap";
-import { FiTrash2 } from "react-icons/fi";
+import { FiTrash2, FiCamera } from "react-icons/fi";       // ← added FiCamera
 import "../../styles/TaskForm.css";
 import PrioritySelect from "./PrioritySelect";
 import CustomReactDatetimePicker from "./CustomReactDatetimePicker";
@@ -22,40 +23,34 @@ const forbiddenCharsRegex = /[\\/:*?"<>|]/g;
 const AttachmentTooltip = ({ show, message }) => {
   if (!show) return null;
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: "calc(100% + 5px)",
-        left: "30%",
-        transform: "translateX(-50%)",
-        zIndex: 1000,
-        pointerEvents: "none",
-      }}
-    >
-      <div
-        style={{
-          position: "relative",
-          background: "rgba(0,0,0,0.8)",
-          color: "#fff",
-          padding: "5px 10px",
-          borderRadius: "4px",
-          whiteSpace: "nowrap",
-          fontSize: "0.875rem",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "-5px",
-            left: "10%",
-            transform: "translateX(-50%)",
-            width: 0,
-            height: 0,
-            borderLeft: "5px solid transparent",
-            borderRight: "5px solid transparent",
-            borderBottom: "5px solid rgba(0,0,0,0.8)",
-          }}
-        />
+    <div style={{
+      position: "absolute",
+      top: "calc(100% + 5px)",
+      left: "30%",
+      transform: "translateX(-50%)",
+      zIndex: 1000,
+      pointerEvents: "none"
+    }}>
+      <div style={{
+        position: "relative",
+        background: "rgba(0,0,0,0.8)",
+        color: "#fff",
+        padding: "5px 10px",
+        borderRadius: "4px",
+        whiteSpace: "nowrap",
+        fontSize: "0.875rem"
+      }}>
+        <div style={{
+          position: "absolute",
+          top: "-5px",
+          left: "10%",
+          transform: "translateX(-50%)",
+          width: 0,
+          height: 0,
+          borderLeft: "5px solid transparent",
+          borderRight: "5px solid transparent",
+          borderBottom: "5px solid rgba(0,0,0,0.8)"
+        }} />
         {message}
       </div>
     </div>
@@ -72,25 +67,13 @@ const AttachmentInput = ({ value, onRename }) => {
     setShowTooltip(true);
     setTimeout(() => setShowTooltip(false), 1500);
   };
-
   const clearTooltipIfValid = (val) => {
-    if (!forbiddenCharsRegex.test(val)) {
-      setShowTooltip(false);
-    }
+    if (!forbiddenCharsRegex.test(val)) setShowTooltip(false);
   };
 
   const allowedKeys = [
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Home",
-    "End",
-    "Tab",
-    "Shift",
-    "Control",
-    "Alt",
-    "Meta",
+    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+    "Home", "End", "Tab", "Shift", "Control", "Alt", "Meta"
   ];
 
   const handleKeyDown = (e) => {
@@ -133,13 +116,13 @@ const AttachmentInput = ({ value, onRename }) => {
   };
 
   const handleChange = (e) => {
-    let newValue = e.target.value;
+    const newValue = e.target.value;
     onRename(newValue);
     clearTooltipIfValid(newValue);
   };
 
   const handleBlur = (e) => {
-    let newValue = e.target.value.trim();
+    const newValue = e.target.value.trim();
     if (newValue === "" || /^\.[^.]+$/.test(newValue)) {
       onRename("");
     }
@@ -163,54 +146,74 @@ const AttachmentInput = ({ value, onRename }) => {
   );
 };
 
-const TaskForm = ({ 
-  fetchTasks, 
-  taskToEdit, 
-  clearEdit, 
-  closeModal, 
-  currentPage, 
+const TaskForm = ({
+  fetchTasks,
+  taskToEdit,
+  clearEdit,
+  closeModal,
+  currentPage,
   teamId,
   onDeleteTask
 }) => {
+  // form state
   const [formData, setFormData] = useState({
     title: taskToEdit ? taskToEdit.title : "",
     description: taskToEdit ? taskToEdit.description : "",
     dueDate: taskToEdit && taskToEdit.dueDate
       ? formatDateForInput(taskToEdit.dueDate, taskToEdit.isDateOnly)
       : "",
-    priority: taskToEdit ? taskToEdit.priority : "",
+    priority: taskToEdit ? taskToEdit.priority : ""
   });
   const [attachments, setAttachments] = useState([]);
-
   const [isEditingTime, setIsEditingTime] = useState(() => {
     if (taskToEdit && taskToEdit.dueDate) {
       return !taskToEdit.isDateOnly;
     }
-    return true; 
+    return true;
   });
 
   const descriptionRef = useRef(null);
   const titleInputRef = useRef(null);
 
   useEffect(() => {
+    const onMessage = async (e) => {
+      if (e.origin !== window.location.origin || e.data?.type !== "PHOTO")
+        return;
+      const dataUrl = e.data.payload;
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `photo_${Date.now()}.png`, {
+        type: blob.type,
+      });
+      setAttachments((prev) => [...prev, { file, customName: file.name }]);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+
+  // resize textarea as needed
+  useEffect(() => {
     if (descriptionRef.current) {
       descriptionRef.current.style.height = "auto";
-      descriptionRef.current.style.height = descriptionRef.current.scrollHeight + "px";
+      descriptionRef.current.style.height =
+        descriptionRef.current.scrollHeight + "px";
     }
   }, [formData.description]);
 
+  // preload edit data
   useEffect(() => {
     if (taskToEdit) {
-      const newDueDate = taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
-        ? (taskToEdit.isDateOnly
+      const newDueDate =
+        taskToEdit.dueDate && moment(taskToEdit.dueDate).isValid()
+          ? taskToEdit.isDateOnly
             ? moment(taskToEdit.dueDate).format("YYYY-MM-DD")
-            : formatDateForInput(taskToEdit.dueDate))
-        : "";
+            : formatDateForInput(taskToEdit.dueDate)
+          : "";
       setFormData({
         title: taskToEdit.title,
         description: taskToEdit.description,
         dueDate: newDueDate,
-        priority: taskToEdit.priority,
+        priority: taskToEdit.priority
       });
       setIsEditingTime(!taskToEdit.isDateOnly);
     } else {
@@ -218,50 +221,41 @@ const TaskForm = ({
     }
   }, [taskToEdit]);
 
-  const handleTitleChange = (e) => {
-    setFormData((prev) => ({ ...prev, title: e.target.value }));
-  };
+  const handleTitleChange = (e) =>
+    setFormData((p) => ({ ...p, title: e.target.value }));
 
   const handleChange = (e) => {
-    if (e.target.name === "title") {
-      handleTitleChange(e);
-    } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
-    }
+    if (e.target.name === "title") return handleTitleChange(e);
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFileChange = (e) => {
     const newFiles = Array.from(e.target.files).map((file) => ({
       file,
-      customName: file.name,
+      customName: file.name
     }));
     setAttachments((prev) => [...prev, ...newFiles]);
-    console.log("Updated Attachments:", newFiles);
   };
 
   const handleRenameNewFile = (index, newName) => {
-    const originalFileName = attachments[index].file.name;
-    if (newName.trim() === "") {
-      setAttachments((prev) =>
-        prev.map((file, i) =>
-          i === index ? { ...file, customName: originalFileName } : file
+    const original = attachments[index].file.name;
+    if (!newName.trim()) {
+      return setAttachments((prev) =>
+        prev.map((f, i) =>
+          i === index ? { ...f, customName: original } : f
         )
       );
-      return;
     }
-    const originalExt = originalFileName.split(".").pop();
+    const ext = original.split(".").pop();
     let sanitized = newName.replace(forbiddenCharsRegex, "").trim();
-    if (!sanitized.includes(".")) {
-      sanitized = sanitized + "." + originalExt;
-    }
+    if (!sanitized.includes(".")) sanitized += "." + ext;
     setAttachments((prev) =>
-      prev.map((file, i) => (i === index ? { ...file, customName: sanitized } : file))
+      prev.map((f, i) => (i === index ? { ...f, customName: sanitized } : f))
     );
   };
 
-  const handleRemoveNewAttachment = (index) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
-  };
+  const handleRemoveNewAttachment = (i) =>
+    setAttachments((prev) => prev.filter((_, idx) => idx !== i));
 
   const clearForm = () => {
     setFormData({ title: "", description: "", dueDate: "", priority: "" });
@@ -271,59 +265,45 @@ const TaskForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
-
     data.append("title", formData.title);
     data.append("description", formData.description);
-    if (formData.dueDate) {
-      data.append("dueDate", formData.dueDate);
-    }
-    if (formData.priority) {
-      data.append("priority", formData.priority);
-    }
+    if (formData.dueDate) data.append("dueDate", formData.dueDate);
+    if (formData.priority !== "") data.append("priority", formData.priority);
+    if (teamId) data.append("teamId", teamId);
+    else data.append("personal", "true");
 
-    if (teamId) {
-      data.append("teamId", teamId);
-    } else {
-      data.append("personal", "true");
-    }
-
-    if (attachments.length > 0) {
-      attachments.forEach((item) => {
-        const renamedFile = new File([item.file], item.customName, { 
-          type: item.file.type 
-        });
-        data.append("attachments", renamedFile);
-      });
-    }
+    attachments.forEach(({ file, customName }) => {
+      const renamed = new File([file], customName, { type: file.type });
+      data.append("attachments", renamed);
+    });
 
     const token = localStorage.getItem("token");
     try {
       if (taskToEdit) {
         await axios.put(
-          `http://localhost:5000/api/tasks/${taskToEdit._id}`, 
+          `http://localhost:5000/api/tasks/${taskToEdit._id}`,
           data,
-          { headers: { Authorization: `Bearer ${token}` }}
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       } else {
-        await axios.post(
-          "http://localhost:5000/api/tasks", 
-          data,
-          { headers: { Authorization: `Bearer ${token}` }}
-        );
+        await axios.post("http://localhost:5000/api/tasks", data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
       }
       fetchTasks(currentPage);
       clearForm();
-      if (closeModal) closeModal();
+      closeModal?.();
     } catch (error) {
       console.error("Error submitting task:", error);
-      alert(error.response?.data?.message || "Task submission failed. Please try again.");
+      alert(error.response?.data?.message || "Task submission failed.");
     }
   };
 
   return (
     <div style={{ position: "relative" }}>
       <Form onSubmit={handleSubmit} className="task-form">
-        <Form.Group className="mb-3" controlId="formTitle" style={{ position: "relative" }}>
+        {/* Title */}
+        <Form.Group className="mb-3" controlId="formTitle">
           <Form.Label>Title</Form.Label>
           <Form.Control
             ref={titleInputRef}
@@ -335,6 +315,7 @@ const TaskForm = ({
           />
         </Form.Group>
 
+        {/* Description */}
         <Form.Group className="mb-3" controlId="formDescription">
           <Form.Label>Description</Form.Label>
           <Form.Control
@@ -352,53 +333,33 @@ const TaskForm = ({
           />
         </Form.Group>
 
+        {/* Due Date & Priority */}
         <Row className="mb-3">
           <Col>
-            <Form.Group controlId="formDueDate" style={{ position: "relative" }}>
-              <Form.Label>Date {isEditingTime ? "& Time" : ""}</Form.Label>
+            <Form.Group controlId="formDueDate">
+              <Form.Label>
+                Date {isEditingTime ? "& Time" : ""}
+              </Form.Label>
               <CustomReactDatetimePicker
                 mode={isEditingTime ? "datetime-local" : "date"}
                 selectedDate={formData.dueDate}
-                onChange={(newDate) =>
-                  setFormData({ ...formData, dueDate: newDate || "" })
-                }
+                onChange={(d) => setFormData({ ...formData, dueDate: d || "" })}
               />
               {formData.dueDate && (
                 <Button
                   variant="link"
                   onClick={(e) => {
                     e.preventDefault();
+                    let d = formData.dueDate;
                     if (!isEditingTime) {
-                      let newDueDate = formData.dueDate;
-                      if (newDueDate && !newDueDate.includes("T")) {
-                        newDueDate = newDueDate + "T00:00";
-                      }
-                      setFormData({ ...formData, dueDate: newDueDate });
+                      if (d && !d.includes("T")) d += "T00:00";
                     } else {
-                      let newDueDate = formData.dueDate;
-                      if (newDueDate && newDueDate.includes("T")) {
-                        newDueDate = newDueDate.split("T")[0];
-                      }
-                      setFormData({ ...formData, dueDate: newDueDate });
+                      if (d && d.includes("T")) d = d.split("T")[0];
                     }
+                    setFormData({ ...formData, dueDate: d });
                     setIsEditingTime(!isEditingTime);
                   }}
-                  style={{
-                    position: "absolute",
-                    right: "0px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    fontSize: "0.1rem",
-                    lineHeight: "0",
-                    padding: "0",
-                    margin: "0",
-                    width: "20px",
-                    height: "20px",
-                    border: "none",
-                    background: "transparent",
-                    opacity: 0,
-                    cursor: "default"
-                  }}
+                  style={{ position: "absolute", right: 0, top: "50%", transform: "translateY(-50%)", opacity: 0 }}
                 >
                   {isEditingTime ? "Remove Time" : "Add Time"}
                 </Button>
@@ -410,31 +371,42 @@ const TaskForm = ({
               <Form.Label>Priority</Form.Label>
               <PrioritySelect
                 value={formData.priority}
-                onChange={(newPriority) =>
-                  setFormData({ ...formData, priority: newPriority })
-                }
+                onChange={(p) => setFormData({ ...formData, priority: p })}
               />
             </Form.Group>
           </Col>
         </Row>
 
+        {/* Attachments + Camera */}
         <Form.Group className="mb-3" controlId="formAttachments">
           <Form.Label>Attachments</Form.Label>
-          <Form.Control type="file" multiple onChange={handleFileChange} />
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Form.Control type="file" multiple onChange={handleFileChange} />
+            <Button
+              variant="outline-secondary"
+              onClick={() =>
+                window.open("/camera", "_blank")
+              }
+              title="Open camera in new tab"
+            >
+              <FiCamera />
+            </Button>
+          </div>
         </Form.Group>
 
+        {/* Preview new attachments */}
         {attachments.length > 0 && (
           <div className="mb-3">
             <h6>New Attachments:</h6>
-            {attachments.map((item, index) => (
-              <div key={index} className="attachment-wrapper">
+            {attachments.map((item, i) => (
+              <div key={i} className="attachment-wrapper">
                 <AttachmentInput
                   value={item.customName}
-                  onRename={(newVal) => handleRenameNewFile(index, newVal)}
+                  onRename={(val) => handleRenameNewFile(i, val)}
                 />
                 <span
                   className="attachment-delete-btn"
-                  onClick={() => handleRemoveNewAttachment(index)}
+                  onClick={() => handleRemoveNewAttachment(i)}
                 >
                   <FiTrash2 size={18} />
                 </span>
@@ -443,6 +415,7 @@ const TaskForm = ({
           </div>
         )}
 
+        {/* Action buttons */}
         <div className="button-group">
           <Button variant="secondary" onClick={closeModal}>
             Cancel
@@ -452,7 +425,7 @@ const TaskForm = ({
           </Button>
         </div>
       </Form>
-    </div>
+    </div >
   );
 };
 

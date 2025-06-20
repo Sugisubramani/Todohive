@@ -8,6 +8,7 @@ import VerificationPage from './pages/VerificationPage';
 import TeamManagementPage from './pages/TeamManagementPage';
 import PrivateRoute from './routes/PrivateRoute';
 import { TeamProvider } from './context/TeamContext';
+import CameraPage from "./pages/CameraPage";
 import './styles/Dashboard.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth/*" element={<AuthPage />} />
+            <Route path="/camera" element={<CameraPage />} />
           <Route path="/verify-email" element={<VerificationPage />} />
           <Route 
             path="/dashboard" 

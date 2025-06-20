@@ -499,3 +499,34 @@ exports.clearTasks = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.createComment = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { text, authorId, authorName } = req.body;
+
+    const task = await Task.findById(taskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const newComment = {
+      text,
+      authorId,
+      authorName,
+      createdAt: new Date()
+    };
+
+    task.comments.push(newComment);
+    await task.save();
+
+    const io = req.app.get('io');
+    io.to(taskId).emit('newComment', {
+      taskId,
+      comment: newComment
+    });
+
+    res.status(201).json({ comment: newComment });
+  } catch (error) {
+    console.error('Error creating comment:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

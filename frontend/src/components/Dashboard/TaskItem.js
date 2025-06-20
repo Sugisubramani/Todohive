@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { createPortal } from "react-dom";
-import { FaRegCalendarAlt, FaPaperclip } from "react-icons/fa";
+import { FaRegCalendarAlt, FaPaperclip, FaComment } from "react-icons/fa";
 import moment from "moment";
 import AttachmentItem from "./AttachmentItem";
 import { OverlayTrigger, Tooltip } from "react-bootstrap";
+import CommentBox from "./CommentBox";
 import "../../styles/TaskItem.css";
 
 const formatDueDateDisplay = (task) => {
@@ -20,6 +21,7 @@ const formatDueDateDisplay = (task) => {
 const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const [expanded, setExpanded] = useState(false);
   const [showAttachmentsModal, setShowAttachmentsModal] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const currentUser = JSON.parse(localStorage.getItem("user"));
 
@@ -35,8 +37,8 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
     task.createdBy && (task.createdBy._id || task.createdBy.id)
       ? String(task.createdBy._id || task.createdBy.id).trim()
       : task.createdBy
-      ? String(task.createdBy).trim()
-      : "";
+        ? String(task.createdBy).trim()
+        : "";
   const createdByName =
     task.createdBy && task.createdBy.name ? task.createdBy.name : "";
 
@@ -121,15 +123,15 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
   const dueDatePassed = task.dueDate
     ? isDateOnly
       ? moment()
-          .startOf("day")
-          .isAfter(moment(task.dueDate).local().startOf("day"))
+        .startOf("day")
+        .isAfter(moment(task.dueDate).local().startOf("day"))
       : moment().isAfter(moment(task.dueDate).local())
     : false;
   const statusLabel = task.completed
     ? "Completed"
     : !task.completed && dueDatePassed
-    ? "Pending"
-    : "";
+      ? "Pending"
+      : "";
 
   const formattedDueDate = formatDueDateDisplay(task);
 
@@ -228,12 +230,27 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
             </div>
           )}
 
+          {task.teamId && (
+            <div
+              className="task-comments"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowCommentsModal(true);
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <FaComment className="comment-icon" />
+              <span className="comments-count">
+                {task.comments?.length || 0}
+              </span>
+            </div>
+          )}
+
           {task.createdBy && task.teamId && (
             <div className="task-created-by" style={{ marginLeft: "auto" }}>
               <small>
-                {`Created by ${
-                  createdById === currentUserId ? "you" : createdByName
-                }`}
+                {`Created by ${createdById === currentUserId ? "you" : createdByName
+                  }`}
               </small>
             </div>
           )}
@@ -273,6 +290,26 @@ const TaskItem = ({ task, fetchTasks, onEditTask, currentPage }) => {
           </div>,
           document.body
         )}
+
+      {showCommentsModal &&
+        createPortal(
+          <div
+            className="ti-modal-overlay"
+            onClick={() => setShowCommentsModal(false)}
+            style={{ cursor: 'pointer' }}
+          >
+            {/* Stop clicks inside from closing */}
+            <div onClick={e => e.stopPropagation()}>
+              <CommentBox
+                task={task}
+                fetchTasks={fetchTasks}
+                onClose={() => setShowCommentsModal(false)}
+              />
+            </div>
+          </div>,
+          document.body
+        )}
+
 
       <span style={{ display: "none" }}>{currentTime}</span>
     </div>

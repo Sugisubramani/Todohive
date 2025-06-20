@@ -1,0 +1,61 @@
+.camera-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* The circular shutter button */
+.shutter-button {
+  position: absolute;
+  bottom: 30px;
+  width: 80px;
+  height: 80px;
+  border: 6px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.2s ease,
+              box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* Hover makes it glow/bigger */
+.shutter-button:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+/* Press makes it shrink */
+.shutter-button:active {
+  transform: scale(0.9);
+}
+
+/* Flash overlay */
+.flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  animation: flashAnim 0.3s forwards;
+}
+
+@keyframes flashAnim {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}

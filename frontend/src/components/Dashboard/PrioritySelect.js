@@ -59,10 +59,9 @@ const customSelectStyles = {
   }),
 };
 
-
 const PrioritySelect = ({ value, onChange }) => {
   const selectedOption =
-    priorityOptions.find(option => option.value === value) || priorityOptions[0];
+    priorityOptions.find(option => option.value === (value ?? '')) || priorityOptions[0];
 
   return (
     <Select

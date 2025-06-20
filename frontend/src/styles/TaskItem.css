@@ -419,3 +419,21 @@
 .custom-tooltip .tooltip-arrow::before {
   border-left-color: #495057 !important;
 }
+
+.task-comments {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  gap: 3px;
+}
+
+.comment-icon {
+  color: #666;
+  font-size: 14px;
+}
+
+.comments-count {
+  color: #666;
+  font-size: 14px;
+}
+

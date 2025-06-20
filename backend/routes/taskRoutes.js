@@ -11,7 +11,8 @@ const {
   deleteTask, 
   deleteAttachment, 
   renameAttachment, 
-  clearTasks 
+  clearTasks,
+  createComment,
 } = require("../controllers/taskController");
 
 const storagePath = path.join(__dirname, "../uploads");
@@ -40,7 +41,7 @@ const upload = multer({
 router.use(authMiddleware);
 
 router.put("/:id/attachments/rename", renameAttachment);
-
+router.post('/:taskId/comments', createComment);
 router.post("/", upload.array("attachments", 5), createTask);
 router.get("/", getTasks);
 
